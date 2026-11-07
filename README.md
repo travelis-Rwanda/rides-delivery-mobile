@@ -20,6 +20,17 @@ illustrative data, storage, and vector scenes are in `src/features/delivery/`.
 Service IDs and stored data are validated before use. Save failures remain
 visible and do not produce a successful confirmation.
 
+The bottom navigation uses `src/components/navigation/AnimatedTabBar.tsx`.
+Inactive tabs show their icons; the selected tab lifts its icon and reveals its
+Stolzl label underneath, inside a sliding pill. Equal-width slots keep touch
+targets in place, and the bar grows with the system font scale (up to 1.5×).
+Labels stay at their final size and fade/translate into place with a 260ms easing
+curve; only the icons receive press scaling. Reanimated springs drive the
+sliding highlight and touch feedback,
+respecting the device's reduced-motion preference. Tab press/long-press events,
+accessible names and selection state, and safe-area spacing remain connected to
+Expo Router.
+
 ## Styling
 
 The UI bundles the supplied Rides logo at `assets/brand/rides-logo.png` and the
