@@ -2,7 +2,31 @@
 
 Expo mobile app using NativeWind 4 and Tailwind CSS 3.
 
+## Customer delivery UI
+
+Routes live under `src/app/` and use Expo Router. Discover offers parcel,
+restaurant, shop, and cargo services; each leads through a request form, shared
+order review, and preview confirmation. Activity separates locally saved previews
+from future active and past bookings. Help includes accessible expandable FAQs.
+
+This is a frontend preview: sample catalogue prices and estimates are illustrative.
+No request is sent, driver booked, merchant contacted, or payment taken. Saved
+previews use AsyncStorage on the current device. Existing Rides authentication is
+not replaced. Merchant catalogues, collection-point availability, quotes, booking,
+payments, and real order history still require the existing Rides APIs.
+
+Shared controls are in `src/components/ui/`; delivery types, validation,
+illustrative data, storage, and vector scenes are in `src/features/delivery/`.
+Service IDs and stored data are validated before use. Save failures remain
+visible and do not produce a successful confirmation.
+
 ## Styling
+
+The UI bundles the supplied Rides logo at `assets/brand/rides-logo.png` and the
+installed Stolzl Regular, Medium, and Bold faces under `assets/fonts/`. Expo Font
+loads the three weights as one `Stolzl` family before rendering the app. Shared
+text and field primitives, plus the navigation labels, all use that family.
+The PNG is preserved with its original transparency.
 
 The approved Rides light and dark palettes live in `src/constants/colors.js`.
 `tailwind.config.js` turns these tokens into CSS variables and semantic utilities.
@@ -41,6 +65,7 @@ Rebuild an existing development client after adding native dependencies.
 ```sh
 npm run lint
 npm run typecheck
+npm test
 ```
 
 Setup follows the [NativeWind installation guide](https://www.nativewind.dev/docs/getting-started/installation).

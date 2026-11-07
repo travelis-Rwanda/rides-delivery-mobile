@@ -1,0 +1,97 @@
+import { getService, previewCatalog, type ServiceId } from './services';
+
+export type DeliveryRequest = {
+  id: string;
+  service: ServiceId;
+  pickup: string;
+  destination: string;
+  description: string;
+  method: 'pickup' | 'collection';
+  size: 'Small' | 'Medium' | 'Large';
+  notes: string;
+  quantities: Record<string, number>;
+  createdAt: string;
+  previewConfirmed: boolean;
+};
+
+export function selectedItems(request: DeliveryRequest) {
+  if (request.service !== 'restaurant' && request.service !== 'shop') return [];
+  return previewCatalog[request.service].flatMap((item) => {
+    const quantity = request.quantities[item.id] ?? 0;
+    return quantity > 0 ? [{ ...item, quantity }] : [];
+  });
+}
+
+export function previewEstimate(request: DeliveryRequest) {
+  const items = selectedItems(request);
+  const subtotal = items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0,
+  );
+  const transport =
+    request.service === 'cargo'
+      ? 12000
+      : request.size === 'Large' && request.service === 'parcel'
+        ? 3000
+        : 1500;
+  const serviceFee = request.service === 'cargo' ? 1000 : 500;
+  return {
+    subtotal,
+    transport,
+    serviceFee,
+    total: subtotal + transport + serviceFee,
+  };
+}
+
+export function validateRequest(
+  request: DeliveryRequest,
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  const merchantOrder =
+    request.service === 'restaurant' || request.service === 'shop';
+  if (!request.pickup.trim())
+    errors.pickup =
+      request.method === 'collection'
+        ? 'Enter a collection point.'
+        : 'Enter a pickup address.';
+  if (!request.destination.trim())
+    errors.destination = 'Enter a delivery address.';
+  if (!merchantOrder && !request.description.trim())
+    errors.description = 'Tell us what you would like to send.';
+  if (merchantOrder && selectedItems(request).length === 0)
+    errors.items = 'Add at least one item to continue.';
+  if (
+    request.pickup.trim() &&
+    request.pickup.trim().toLowerCase() ===
+      request.destination.trim().toLowerCase()
+  )
+    errors.destination = 'Choose a destination different from the pickup.';
+  return errors;
+}
+
+export function isDeliveryRequest(value: unknown): value is DeliveryRequest {
+  if (!value || typeof value !== 'object') return false;
+  const r = value as Record<string, unknown>;
+  return (
+    typeof r.id === 'string' &&
+    !!r.id &&
+    !!getService(r.service) &&
+    ['pickup', 'destination', 'description', 'notes', 'createdAt'].every(
+      (key) => typeof r[key] === 'string',
+    ) &&
+    Number.isFinite(Date.parse(r.createdAt as string)) &&
+    (r.method === 'pickup' || r.method === 'collection') &&
+    ['Small', 'Medium', 'Large'].includes(r.size as string) &&
+    typeof r.previewConfirmed === 'boolean' &&
+    !!r.quantities &&
+    typeof r.quantities === 'object' &&
+    !Array.isArray(r.quantities) &&
+    Object.values(r.quantities).every(
+      (quantity) =>
+        typeof quantity === 'number' &&
+        Number.isInteger(quantity) &&
+        quantity >= 0 &&
+        quantity <= 20,
+    )
+  );
+}
