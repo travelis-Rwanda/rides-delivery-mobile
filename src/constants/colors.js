@@ -1,0 +1,71 @@
+// Approved Rides tokens from the existing mobile app. Keep brand success green
+// distinct from Apple's system green. Eight-digit hex values include alpha.
+const light = {
+  foreground: '#0A0A0A',
+  background: '#F2F2F7',
+  card: '#FFFFFF',
+  primary: '#007AFF',
+  'primary-foreground': '#FFFFFF',
+  'star-muted': '#007AFF55',
+  success: '#00C853',
+  'success-foreground': '#000000',
+  'success-muted': '#00C85318',
+  warning: '#FF9500',
+  'warning-foreground': '#FFFFFF',
+  'warning-muted': '#FF950018',
+  secondary: '#E8F1FF',
+  'secondary-foreground': '#1A1A1A',
+  accent: '#E8F1FF',
+  'accent-foreground': '#007AFF',
+  muted: '#F0F0F0',
+  'muted-foreground': '#737373',
+  destructive: '#FF3B30',
+  'destructive-foreground': '#FFFFFF',
+  border: '#E0E0E0',
+  input: '#E0E0E0',
+  surface: '#FAFAFA',
+  'system-green': '#34C759',
+  'system-gray': '#8E8E93',
+};
+
+/** @type {Record<keyof typeof light, string>} */
+const dark = {
+  foreground: '#FFFFFF',
+  background: '#000000',
+  card: '#1C1C1E',
+  primary: '#0A84FF',
+  'primary-foreground': '#FFFFFF',
+  'star-muted': '#0A84FF55',
+  success: '#32D74B',
+  'success-foreground': '#000000',
+  'success-muted': '#32D74B22',
+  warning: '#FF9F0A',
+  'warning-foreground': '#000000',
+  'warning-muted': '#FF9F0A22',
+  secondary: '#0C1929',
+  'secondary-foreground': '#FFFFFF',
+  accent: '#0A84FF20',
+  'accent-foreground': '#0A84FF',
+  muted: '#1E1E1E',
+  'muted-foreground': '#9E9E9E',
+  destructive: '#FF453A',
+  'destructive-foreground': '#FFFFFF',
+  border: '#2A2A2A',
+  input: '#1E1E1E',
+  surface: '#1C1C1E',
+  'system-green': '#30D158',
+  'system-gray': '#8E8E93',
+};
+
+const aliases = {
+  text: 'foreground',
+  tint: 'primary',
+  star: 'primary',
+  'brand-green': 'success',
+  'surface-alt': 'muted',
+  'system-blue': 'primary',
+  'system-orange': 'warning',
+  'system-red': 'destructive',
+};
+
+module.exports = { colors: { light, dark }, aliases };
