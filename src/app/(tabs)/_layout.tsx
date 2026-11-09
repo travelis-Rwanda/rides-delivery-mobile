@@ -7,9 +7,13 @@ export default function TabLayout() {
   const palette = usePalette();
   return (
     <Tabs
+      // These three small screens retain their native views between tab changes.
+      detachInactiveScreens={false}
       tabBar={(props) => <AnimatedTabBar {...props} />}
       screenOptions={{
         headerShown: false,
+        lazy: false,
+        animation: 'none',
         sceneStyle: { backgroundColor: palette.background },
       }}
     >

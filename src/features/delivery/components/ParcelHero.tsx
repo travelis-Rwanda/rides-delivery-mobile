@@ -1,6 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
+
+import { ScrollPressable } from '../../../components/ui/ScrollInteraction';
 import Svg, {
   Circle,
   Defs,
@@ -106,16 +108,16 @@ function ParcelScene() {
 
 export function ParcelHero() {
   return (
-    <Pressable
+    <ScrollPressable
       accessibilityRole="button"
       accessibilityLabel="Send a parcel. From your door to theirs."
       onPress={() =>
-        router.push({
+        router.navigate({
           pathname: '/delivery/[service]',
           params: { service: 'parcel' },
         })
       }
-      className="overflow-hidden rounded-[24px] active:opacity-90"
+      className="overflow-hidden rounded-[24px]"
     >
       <LinearGradient
         colors={['#007AFF', '#1956EF', '#2739CE']}
@@ -144,6 +146,6 @@ export function ParcelHero() {
           </View>
         </View>
       </LinearGradient>
-    </Pressable>
+    </ScrollPressable>
   );
 }

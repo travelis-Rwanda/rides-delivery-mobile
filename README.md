@@ -31,6 +31,27 @@ respecting the device's reduced-motion preference. Tab press/long-press events,
 accessible names and selection state, and safe-area spacing remain connected to
 Expo Router.
 
+Home cards use `ScrollPressable` inside `PageScroll`: a gesture is cancelled after
+10 points of movement or any intervening scroll, and a touch that stops momentum
+cannot open a card. Normal taps and keyboard activation remain available; press
+feedback waits 100ms and uses a subtle opacity change. Home navigation reuses
+existing routes. The three tab scenes stay mounted and attached with no scene
+animation, while the tab bar itself remains animated. The navigation theme uses
+the same palette as the pages so transitions do not expose a different backdrop.
+The native window background is also set through Expo SystemUI at module startup
+and updated when the theme changes. Root, safe-area, scrolling, and footer views
+have explicit backgrounds from their first render. Android stack screens slide
+horizontally instead of using the default fade through the native window. These
+runtime changes work in Expo Go with the already-installed `expo-system-ui`.
+
+Delivery forms use `<Page avoidKeyboard>` so their safe area, scroll content, and
+footer stay above the keyboard on both Android and iOS. `PageScroll` registers
+the focused `Field`, then remeasures it after focus, keyboard appearance, or a
+viewport change and scrolls only as far as needed to reveal it above the footer.
+Scrolling keeps the keyboard open and preserves input focus; taps on form
+controls remain available while editing. This uses
+built-in React Native APIs and works in Expo Go.
+
 ## Styling
 
 The UI bundles the supplied Rides logo at `assets/brand/rides-logo.png` and the

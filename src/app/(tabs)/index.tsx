@@ -1,5 +1,7 @@
 import { router } from 'expo-router';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
+
+import { ScrollPressable } from '../../components/ui/ScrollInteraction';
 
 import { Brand } from '../../components/ui/Brand';
 import { Icon } from '../../components/ui/Icon';
@@ -20,14 +22,14 @@ export default function DiscoverScreen() {
       <PageScroll>
         <View className="flex-row items-center justify-between pb-7 pt-4">
           <Brand />
-          <Pressable
+          <ScrollPressable
             accessibilityRole="button"
             accessibilityLabel="Delivery help"
-            onPress={() => router.push('/help')}
-            className="h-11 w-11 items-center justify-center rounded-full bg-card active:opacity-60"
+            onPress={() => router.navigate('/help')}
+            className="h-11 w-11 items-center justify-center rounded-full bg-card"
           >
             <Icon name="help" size={21} color={p.foreground} />
-          </Pressable>
+          </ScrollPressable>
         </View>
 
         <View className="mb-6">
@@ -60,20 +62,20 @@ export default function DiscoverScreen() {
             ))}
         </View>
 
-        <Pressable
+        <ScrollPressable
           accessibilityRole="button"
           accessibilityLabel={
             latest ? 'Open your saved request' : 'View your delivery activity'
           }
           onPress={() =>
             latest
-              ? router.push({
+              ? router.navigate({
                   pathname: '/request/[id]',
                   params: { id: latest.id },
                 })
-              : router.push('/activity')
+              : router.navigate('/activity')
           }
-          className="mt-6 flex-row items-center gap-3.5 border-b border-border pb-5 pt-1 active:opacity-60"
+          className="mt-6 flex-row items-center gap-3.5 border-b border-border pb-5 pt-1"
         >
           <View className="h-11 w-11 items-center justify-center rounded-[14px] bg-secondary">
             <Icon name="activity" color={p.primary} size={21} />
@@ -89,18 +91,18 @@ export default function DiscoverScreen() {
             </Text>
           </View>
           <Icon name="chevron" size={17} color={p['muted-foreground']} />
-        </Pressable>
-        <Pressable
+        </ScrollPressable>
+        <ScrollPressable
           accessibilityRole="button"
           accessibilityLabel="Learn how Rides delivery works"
-          onPress={() => router.push('/help')}
-          className="mt-1 min-h-14 flex-row items-center justify-center gap-2 active:opacity-60"
+          onPress={() => router.navigate('/help')}
+          className="mt-1 min-h-14 flex-row items-center justify-center gap-2"
         >
           <Icon name="shield" size={15} color={p['muted-foreground']} />
           <Text className="text-[10px] text-muted-foreground">
             Your delivery. The Rides network behind it.
           </Text>
-        </Pressable>
+        </ScrollPressable>
       </PageScroll>
     </Page>
   );

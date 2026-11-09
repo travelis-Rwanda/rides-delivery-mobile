@@ -1,12 +1,14 @@
 import { router } from 'expo-router';
-import { useState, type PropsWithChildren } from 'react';
+import { useContext, useRef, useState, type PropsWithChildren } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
-  ScrollView,
   TextInput,
   View,
   type TextInputProps,
+  type TextInputInstance,
 } from 'react-native';
 import { Text } from './Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,27 +16,41 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { usePalette } from '../../hooks/usePalette';
 import { Icon, type IconName } from './Icon';
 import { BrandMark } from './Brand';
+import { KeyboardInputContext, KeyboardScroll } from './KeyboardScroll';
 
-export function Page({ children }: PropsWithChildren) {
-  return (
+export function Page({
+  children,
+  avoidKeyboard = false,
+}: PropsWithChildren<{ avoidKeyboard?: boolean }>) {
+  const palette = usePalette();
+  const content = (
     <SafeAreaView
       edges={['top', 'left', 'right']}
-      className="flex-1 bg-background"
+      style={{ flex: 1, backgroundColor: palette.background }}
     >
       {children}
     </SafeAreaView>
+  );
+  return avoidKeyboard ? (
+    <KeyboardAvoidingView
+      // This wraps our own header and safe area; there is no native header offset.
+      behavior="padding"
+      enabled={Platform.OS !== 'web'}
+      keyboardVerticalOffset={0}
+      style={{ flex: 1, backgroundColor: palette.background }}
+    >
+      {content}
+    </KeyboardAvoidingView>
+  ) : (
+    content
   );
 }
 
 export function PageScroll({ children }: PropsWithChildren) {
   return (
-    <ScrollView
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ flexGrow: 1 }}
-    >
+    <KeyboardScroll>
       <View className="mx-auto w-full max-w-2xl px-5 pb-8">{children}</View>
-    </ScrollView>
+    </KeyboardScroll>
   );
 }
 
@@ -133,10 +149,13 @@ export function Field({
 }: TextInputProps & { label: string; error?: string }) {
   const palette = usePalette();
   const [focused, setFocused] = useState(false);
+  const input = useRef<TextInputInstance>(null);
+  const keyboard = useContext(KeyboardInputContext);
   return (
     <View className="gap-2">
       <Text className="text-[12px] font-medium text-foreground">{label}</Text>
       <TextInput
+        ref={input}
         accessibilityLabel={label}
         placeholderTextColor={palette['muted-foreground']}
         className={`min-h-14 rounded-[16px] border bg-card px-4 py-[18px] text-[14px] text-foreground ${error ? 'border-destructive' : focused ? 'border-primary' : 'border-input'}`}
@@ -144,10 +163,12 @@ export function Field({
         style={[{ fontFamily: 'Stolzl' }, style]}
         onFocus={(event) => {
           setFocused(true);
+          keyboard?.focus(input.current);
           onFocus?.(event);
         }}
         onBlur={(event) => {
           setFocused(false);
+          keyboard?.blur(input.current);
           onBlur?.(event);
         }}
       />
@@ -208,10 +229,12 @@ export function EmptyState({
 }
 
 export function Footer({ children }: PropsWithChildren) {
+  const palette = usePalette();
   return (
     <SafeAreaView
       edges={['bottom', 'left', 'right']}
-      className="border-t border-border bg-card"
+      className="border-t border-border"
+      style={{ backgroundColor: palette.card }}
     >
       <View className="mx-auto w-full max-w-2xl gap-2 px-5 pb-3 pt-4">
         {children}

@@ -1,17 +1,24 @@
 import '../../global.css';
 
-import { Stack } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
 import { colorScheme } from 'nativewind';
 import { useEffect } from 'react';
-import { Platform, useColorScheme } from 'react-native';
+import { Appearance, Platform, View, useColorScheme } from 'react-native';
 
+import { colors } from '../constants/colors';
 import { DeliveryProvider } from '../features/delivery/DeliveryProvider';
 import { usePalette } from '../hooks/usePalette';
 
 void SplashScreen.preventAutoHideAsync();
+// Set Android's window/decor background before any screen can transition.
+// A navigation theme only paints views inside that native surface.
+void SystemUI.setBackgroundColorAsync(
+  colors[Appearance.getColorScheme() === 'dark' ? 'dark' : 'light'].background,
+);
 
 export default function RootLayout() {
   const palette = usePalette();
@@ -33,16 +40,42 @@ export default function RootLayout() {
     // Keep NativeWind's web class in sync without overriding native Appearance.
     if (Platform.OS === 'web') colorScheme.set(systemScheme ?? 'light');
   }, [systemScheme]);
-  if (!fontsLoaded && !fontError) return null;
+  useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(palette.background);
+  }, [palette.background]);
+
+  const backgroundStyle = { flex: 1, backgroundColor: palette.background };
+  if (!fontsLoaded && !fontError) return <View style={backgroundStyle} />;
+  const baseTheme = systemScheme === 'dark' ? DarkTheme : DefaultTheme;
   return (
-    <DeliveryProvider>
-      <StatusBar style="auto" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: palette.background },
+    <View style={backgroundStyle}>
+      <ThemeProvider
+        value={{
+          ...baseTheme,
+          colors: {
+            ...baseTheme.colors,
+            background: palette.background,
+            card: palette.card,
+            text: palette.foreground,
+            border: palette.border,
+            primary: palette.primary,
+            notification: palette.destructive,
+          },
         }}
-      />
-    </DeliveryProvider>
+      >
+        <DeliveryProvider>
+          <StatusBar style="auto" />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              // Android's default fade can expose the window between screens.
+              animation:
+                Platform.OS === 'android' ? 'slide_from_right' : 'default',
+              contentStyle: { backgroundColor: palette.background },
+            }}
+          />
+        </DeliveryProvider>
+      </ThemeProvider>
+    </View>
   );
 }

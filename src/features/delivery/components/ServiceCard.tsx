@@ -1,5 +1,7 @@
 import { router } from 'expo-router';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
+
+import { ScrollPressable } from '../../../components/ui/ScrollInteraction';
 
 import { Icon } from '../../../components/ui/Icon';
 import { Text } from '../../../components/ui/Text';
@@ -23,16 +25,16 @@ export function ServiceCard({ service }: { service: Service }) {
         ? p.warning
         : p.primary;
   return (
-    <Pressable
+    <ScrollPressable
       accessibilityRole="button"
       accessibilityLabel={`${service.title}. ${service.description}`}
       onPress={() =>
-        router.push({
+        router.navigate({
           pathname: '/delivery/[service]',
           params: { service: service.id },
         })
       }
-      className="min-h-[138px] flex-1 rounded-[20px] bg-card px-3.5 py-4 active:opacity-60"
+      className="min-h-[138px] flex-1 rounded-[20px] bg-card px-3.5 py-4"
     >
       <View
         className={`mb-4 h-11 w-11 items-center justify-center rounded-[14px] ${service.tone === 'green' ? 'bg-success-muted' : service.tone === 'orange' ? 'bg-warning-muted' : 'bg-secondary'}`}
@@ -45,6 +47,6 @@ export function ServiceCard({ service }: { service: Service }) {
       <Text className="mt-1 text-[10px] leading-[16px] text-muted-foreground">
         {label.subtitle}
       </Text>
-    </Pressable>
+    </ScrollPressable>
   );
 }
