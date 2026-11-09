@@ -18,6 +18,7 @@ import { useDelivery } from '../../features/delivery/DeliveryProvider';
 import { previewEstimate, selectedItems } from '../../features/delivery/model';
 import { formatMoney, getService } from '../../features/delivery/services';
 import { usePalette } from '../../hooks/usePalette';
+import { CatalogImage } from '../../features/merchants/components/CatalogImage';
 
 export default function ReviewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -179,10 +180,14 @@ export default function ReviewScreen() {
         {items.length > 0 && (
           <View className="mb-4 gap-4 rounded-[20px] bg-card p-5">
             <Text className="text-base font-bold text-foreground">
-              Your sample order
+              Your basket
             </Text>
             {items.map((item) => (
               <View key={item.id} className="flex-row items-start gap-3">
+                <CatalogImage
+                  imageKey={item.imageKey}
+                  style={{ width: 44, height: 44, borderRadius: 10 }}
+                />
                 <View className="h-7 w-7 items-center justify-center rounded-lg bg-muted">
                   <Text className="text-xs font-medium text-foreground">
                     {item.quantity}×

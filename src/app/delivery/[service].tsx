@@ -1,6 +1,6 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 import { Text } from '../../components/ui/Text';
 
 import { Icon } from '../../components/ui/Icon';
@@ -27,14 +27,28 @@ import {
   type Service,
 } from '../../features/delivery/services';
 import { usePalette } from '../../hooks/usePalette';
+import {
+  getMerchant,
+  sameMerchantBasket,
+  isMerchantService,
+  type Merchant,
+} from '../../features/merchants/catalog';
+import { useMerchantCart } from '../../features/merchants/MerchantCartProvider';
+import { CatalogImage } from '../../features/merchants/components/CatalogImage';
+import { selectedItems } from '../../features/delivery/model';
 
 export default function ServiceRoute() {
-  const { service: serviceId, id } = useLocalSearchParams<{
+  const {
+    service: serviceId,
+    id,
+    merchant: merchantId,
+  } = useLocalSearchParams<{
     service: string;
     id?: string;
+    merchant?: string;
   }>();
   const service = getService(serviceId);
-  const { requests } = useDelivery();
+  const { requests, loading } = useDelivery();
   if (!service)
     return (
       <Page>
@@ -55,11 +69,69 @@ export default function ServiceRoute() {
   const existing = requests.find(
     (entry) => entry.id === id && entry.service === service.id,
   );
+  if (id && loading)
+    return (
+      <Page>
+        <Header title="Your request" />
+        <ActivityIndicator accessibilityLabel="Loading request" />
+      </Page>
+    );
+  if (id && !existing)
+    return (
+      <Page>
+        <Header title="Your request" />
+        <PageScroll>
+          <EmptyState
+            title="Request not found"
+            description="Open a saved request from Activity, or start a new one."
+          >
+            <Button
+              label="Open Activity"
+              onPress={() => router.replace('/activity')}
+            />
+          </EmptyState>
+        </PageScroll>
+      </Page>
+    );
+  const selectedMerchantId = existing?.merchantId ?? merchantId;
+  const merchant = getMerchant(selectedMerchantId, service.id);
+  if (selectedMerchantId && !merchant)
+    return (
+      <Page>
+        <Header title="Business unavailable" />
+        <PageScroll>
+          <EmptyState
+            title="Let’s choose another business"
+            description="This business is not available for the selected service."
+          >
+            <Button
+              label="Explore businesses"
+              onPress={() =>
+                router.replace({
+                  pathname: '/browse/[service]',
+                  params: { service: service.id },
+                })
+              }
+            />
+          </EmptyState>
+        </PageScroll>
+      </Page>
+    );
+  if (isMerchantService(service.id) && !merchant && !existing)
+    return (
+      <Redirect
+        href={{
+          pathname: '/browse/[service]',
+          params: { service: service.id },
+        }}
+      />
+    );
   return (
     <ServiceForm
-      key={`${service.id}-${existing?.id ?? 'new'}`}
+      key={`${service.id}-${merchant?.id ?? 'legacy'}-${existing?.id ?? 'new'}`}
       service={service}
       existing={existing}
+      merchant={merchant}
     />
   );
 }
@@ -67,40 +139,57 @@ export default function ServiceRoute() {
 function ServiceForm({
   service,
   existing,
+  merchant,
 }: {
   service: Service;
   existing?: DeliveryRequest;
+  merchant?: Merchant;
 }) {
   const palette = usePalette();
   const { save, loading, loadError } = useDelivery();
   const merchantOrder = service.id === 'restaurant' || service.id === 'shop';
+  const cart = useMerchantCart(
+    merchant?.id,
+    existing?.id,
+    existing?.quantities,
+  );
   const catalog =
     service.id === 'restaurant' || service.id === 'shop'
       ? previewCatalog[service.id]
       : [];
-  const [form, setForm] = useState<DeliveryRequest>(
+  const [details, setForm] = useState<DeliveryRequest>(
     () =>
       existing ?? {
         id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`,
         service: service.id,
+        ...(merchant ? { merchantId: merchant.id } : {}),
         pickup: merchantOrder
-          ? service.id === 'restaurant'
-            ? 'Sample restaurant'
-            : 'Sample shop'
+          ? (merchant?.name ??
+            (service.id === 'restaurant' ? 'Sample restaurant' : 'Sample shop'))
           : '',
         destination: '',
         description: '',
         method: 'pickup',
         size: 'Small',
         notes: '',
-        quantities: {},
+        quantities: merchant ? { ...cart.quantities } : {},
         createdAt: new Date().toISOString(),
         previewConfirmed: false,
       },
   );
+  const form = merchant
+    ? {
+        ...details,
+        quantities: cart.quantities,
+        previewConfirmed:
+          details.previewConfirmed &&
+          sameMerchantBasket(merchant, details.quantities, cart.quantities),
+      }
+    : details;
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const basket = selectedItems(form);
 
   function update<K extends keyof DeliveryRequest>(
     key: K,
@@ -141,7 +230,7 @@ function ServiceForm({
 
   return (
     <Page avoidKeyboard>
-      <Header title={service.label} />
+      <Header title={merchant ? 'Delivery details' : service.label} />
       <PageScroll>
         <StepIndicator step={2} />
         <View className="mb-6">
@@ -153,14 +242,18 @@ function ServiceForm({
               accessibilityRole="header"
               className="text-[26px] font-medium leading-[35px] tracking-[-0.7px] text-foreground"
             >
-              {merchantOrder
-                ? service.id === 'restaurant'
-                  ? 'Something delicious?'
-                  : 'The everyday essentials.'
-                : 'Let’s plan your delivery.'}
+              {merchant
+                ? 'Good choices.\nWhere to next?'
+                : merchantOrder
+                  ? service.id === 'restaurant'
+                    ? 'Something delicious?'
+                    : 'The everyday essentials.'
+                  : 'Let’s plan your delivery.'}
             </Text>
             <Text className="mt-2 text-[12px] leading-5 text-muted-foreground">
-              {service.description}
+              {merchant
+                ? `Your basket from ${merchant.name}.`
+                : service.description}
             </Text>
           </View>
         </View>
@@ -171,7 +264,84 @@ function ServiceForm({
           </Notice>
         </View>
 
-        {merchantOrder ? (
+        {merchantOrder && merchant ? (
+          <View className="mb-6 rounded-[22px] bg-card p-4">
+            <View className="mb-4 flex-row items-center justify-between gap-2">
+              <View className="flex-1">
+                <Text className="text-[14px] font-medium text-foreground">
+                  Your basket
+                </Text>
+                <Text className="mt-1 text-[11px] text-muted-foreground">
+                  {merchant.name}
+                </Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Edit basket"
+                onPress={() => {
+                  router.push({
+                    pathname: '/merchant/[id]',
+                    params: {
+                      id: merchant.id,
+                      edit: '1',
+                      ...(existing ? { request: existing.id } : {}),
+                    },
+                  });
+                }}
+                className="min-h-11 justify-center px-3"
+              >
+                <Text className="text-[12px] font-medium text-primary">
+                  Edit
+                </Text>
+              </Pressable>
+            </View>
+            {basket.map((item) => (
+              <View key={item.id} className="mb-3 flex-row items-center gap-3">
+                <CatalogImage
+                  imageKey={item.imageKey}
+                  style={{ width: 56, height: 56, borderRadius: 12 }}
+                />
+                <View className="flex-1">
+                  <Text className="text-[12px] font-medium leading-[18px] text-foreground">
+                    {item.name}
+                  </Text>
+                  <Text className="mt-1 text-[10px] text-muted-foreground">
+                    Qty {item.quantity}
+                  </Text>
+                </View>
+                <Text className="text-[11px] font-medium text-foreground">
+                  {formatMoney(item.price * item.quantity)}
+                </Text>
+              </View>
+            ))}
+            {!basket.length && (
+              <Text className="mb-3 text-[12px] text-muted-foreground">
+                Your basket is empty. Tap Edit to choose your items.
+              </Text>
+            )}
+            <View className="mt-1 flex-row justify-between border-t border-border pt-4">
+              <Text className="text-[12px] text-muted-foreground">
+                Items subtotal
+              </Text>
+              <Text className="text-[13px] font-medium text-foreground">
+                {formatMoney(
+                  basket.reduce(
+                    (total, item) => total + item.price * item.quantity,
+                    0,
+                  ),
+                )}
+              </Text>
+            </View>
+            {!!errors.items && (
+              <Text
+                accessibilityRole="alert"
+                className="mt-3 text-[12px] text-destructive"
+              >
+                {errors.items}
+              </Text>
+            )}
+          </View>
+        ) : merchantOrder ? (
           <View className="mb-6 gap-3">
             <View className="mb-1 flex-row items-center justify-between">
               <Text
@@ -200,19 +370,10 @@ function ServiceForm({
               return (
                 <View key={item.id} className="rounded-[16px] bg-card p-4">
                   <View className="flex-row items-start gap-3">
-                    <View
-                      className={`h-12 w-12 items-center justify-center rounded-xl ${service.id === 'restaurant' ? 'bg-warning-muted' : 'bg-success-muted'}`}
-                    >
-                      <Icon
-                        name={item.icon}
-                        color={
-                          service.id === 'restaurant'
-                            ? palette.warning
-                            : palette.success
-                        }
-                        size={24}
-                      />
-                    </View>
+                    <CatalogImage
+                      imageKey={item.imageKey}
+                      style={{ width: 72, height: 72, borderRadius: 14 }}
+                    />
                     <View className="flex-1">
                       <Text className="text-sm font-medium text-foreground">
                         {item.name}

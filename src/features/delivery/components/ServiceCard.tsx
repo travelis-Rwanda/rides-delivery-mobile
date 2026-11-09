@@ -30,7 +30,10 @@ export function ServiceCard({ service }: { service: Service }) {
       accessibilityLabel={`${service.title}. ${service.description}`}
       onPress={() =>
         router.navigate({
-          pathname: '/delivery/[service]',
+          pathname:
+            service.id === 'restaurant' || service.id === 'shop'
+              ? '/browse/[service]'
+              : '/delivery/[service]',
           params: { service: service.id },
         })
       }

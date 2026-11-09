@@ -1,8 +1,10 @@
 import { getService, previewCatalog, type ServiceId } from './services';
+import { getMerchant } from '../merchants/catalog';
 
 export type DeliveryRequest = {
   id: string;
   service: ServiceId;
+  merchantId?: string;
   pickup: string;
   destination: string;
   description: string;
@@ -16,7 +18,10 @@ export type DeliveryRequest = {
 
 export function selectedItems(request: DeliveryRequest) {
   if (request.service !== 'restaurant' && request.service !== 'shop') return [];
-  return previewCatalog[request.service].flatMap((item) => {
+  const catalog = request.merchantId
+    ? (getMerchant(request.merchantId, request.service)?.products ?? [])
+    : previewCatalog[request.service];
+  return catalog.flatMap((item) => {
     const quantity = request.quantities[item.id] ?? 0;
     return quantity > 0 ? [{ ...item, quantity }] : [];
   });
@@ -49,6 +54,20 @@ export function validateRequest(
   const errors: Record<string, string> = {};
   const merchantOrder =
     request.service === 'restaurant' || request.service === 'shop';
+  if (request.merchantId && !getMerchant(request.merchantId, request.service))
+    errors.merchant = 'Choose a valid business for this service.';
+  const merchant = getMerchant(request.merchantId, request.service);
+  if (
+    merchant &&
+    Object.entries(request.quantities).some(
+      ([id, quantity]) =>
+        !merchant.products.some((item) => item.id === id) ||
+        !Number.isInteger(quantity) ||
+        quantity < 0 ||
+        quantity > 20,
+    )
+  )
+    errors.items = 'Check the items and quantities in this business’s basket.';
   if (!request.pickup.trim())
     errors.pickup =
       request.method === 'collection'
@@ -76,6 +95,9 @@ export function isDeliveryRequest(value: unknown): value is DeliveryRequest {
     typeof r.id === 'string' &&
     !!r.id &&
     !!getService(r.service) &&
+    (r.merchantId === undefined ||
+      (typeof r.merchantId === 'string' &&
+        !!getMerchant(r.merchantId, r.service))) &&
     ['pickup', 'destination', 'description', 'notes', 'createdAt'].every(
       (key) => typeof r[key] === 'string',
     ) &&
@@ -92,6 +114,12 @@ export function isDeliveryRequest(value: unknown): value is DeliveryRequest {
         Number.isInteger(quantity) &&
         quantity >= 0 &&
         quantity <= 20,
-    )
+    ) &&
+    (r.merchantId === undefined ||
+      Object.keys(r.quantities).every((id) =>
+        getMerchant(r.merchantId, r.service)?.products.some(
+          (item) => item.id === id,
+        ),
+      ))
   );
 }

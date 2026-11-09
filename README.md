@@ -5,8 +5,10 @@ Expo mobile app using NativeWind 4 and Tailwind CSS 3.
 ## Customer delivery UI
 
 Routes live under `src/app/` and use Expo Router. Discover offers parcel,
-restaurant, shop, and cargo services; each leads through a request form, shared
-order review, and preview confirmation. Activity separates locally saved previews
+restaurant, shop, and cargo services. Food and Shops open searchable business
+directories, followed by a business menu/catalogue, basket, delivery details,
+shared order review, and preview confirmation. Parcel and Cargo open their request
+forms directly. Activity separates locally saved previews
 from future active and past bookings. Help includes accessible expandable FAQs.
 
 This is a frontend preview: sample catalogue prices and estimates are illustrative.
@@ -19,6 +21,17 @@ Shared controls are in `src/components/ui/`; delivery types, validation,
 illustrative data, storage, and vector scenes are in `src/features/delivery/`.
 Service IDs and stored data are validated before use. Save failures remain
 visible and do not produce a successful confirmation.
+
+Business browsing lives in `src/features/merchants/`, with routes at
+`/browse/[service]` and `/merchant/[id]`. Six fictional businesses demonstrate
+search, categories, empty results, image cards, product search, quantity controls,
+and separate in-memory baskets. Checkout saves the selected merchant ID and
+validates that all items belong to that business. Older saved previews without a
+merchant ID continue using their original sample catalogue. Merchant IDs, prices,
+and products currently come from `catalog.ts`; no live merchant API is configured.
+Nine stock photos are bundled locally for Expo Go and offline display, with
+source/usage notes in `assets/catalog/README.md`. The design uses native controls,
+Stolzl, and the existing Rides palette, with photo-led cards inspired by shadcn.
 
 The bottom navigation uses `src/components/navigation/AnimatedTabBar.tsx`.
 Inactive tabs show their icons; the selected tab lifts its icon and reveals its

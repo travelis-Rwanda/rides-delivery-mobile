@@ -11,6 +11,7 @@ import { Appearance, Platform, View, useColorScheme } from 'react-native';
 
 import { colors } from '../constants/colors';
 import { DeliveryProvider } from '../features/delivery/DeliveryProvider';
+import { MerchantCartProvider } from '../features/merchants/MerchantCartProvider';
 import { usePalette } from '../hooks/usePalette';
 
 void SplashScreen.preventAutoHideAsync();
@@ -64,16 +65,18 @@ export default function RootLayout() {
         }}
       >
         <DeliveryProvider>
-          <StatusBar style="auto" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              // Android's default fade can expose the window between screens.
-              animation:
-                Platform.OS === 'android' ? 'slide_from_right' : 'default',
-              contentStyle: { backgroundColor: palette.background },
-            }}
-          />
+          <MerchantCartProvider>
+            <StatusBar style="auto" />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                // Android's default fade can expose the window between screens.
+                animation:
+                  Platform.OS === 'android' ? 'slide_from_right' : 'default',
+                contentStyle: { backgroundColor: palette.background },
+              }}
+            />
+          </MerchantCartProvider>
         </DeliveryProvider>
       </ThemeProvider>
     </View>

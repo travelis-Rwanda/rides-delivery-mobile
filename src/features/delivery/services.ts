@@ -60,6 +60,7 @@ export type CatalogItem = {
   description: string;
   price: number;
   icon: 'food' | 'shop';
+  imageKey?: string;
 };
 
 // Illustrative catalogue and charges for the UI preview. These must be replaced
@@ -71,6 +72,7 @@ export const previewCatalog: Record<
   restaurant: [
     {
       id: 'chicken',
+      imageKey: 'chicken',
       name: 'Grilled chicken & rice',
       description: 'Grilled chicken, rice, fresh salad',
       price: 6500,
@@ -78,6 +80,7 @@ export const previewCatalog: Record<
     },
     {
       id: 'bowl',
+      imageKey: 'bowl',
       name: 'Garden bowl',
       description: 'Seasonal vegetables, grains, avocado',
       price: 4500,
@@ -85,6 +88,7 @@ export const previewCatalog: Record<
     },
     {
       id: 'burger',
+      imageKey: 'burger',
       name: 'Classic beef burger',
       description: 'Beef patty, lettuce, tomato, fries',
       price: 5500,
@@ -94,6 +98,7 @@ export const previewCatalog: Record<
   shop: [
     {
       id: 'produce',
+      imageKey: 'produce',
       name: 'Fresh produce basket',
       description: 'A selection of everyday fruit and vegetables',
       price: 7000,
@@ -101,6 +106,7 @@ export const previewCatalog: Record<
     },
     {
       id: 'pantry',
+      imageKey: 'pantry',
       name: 'Pantry essentials',
       description: 'Rice, beans, and cooking oil',
       price: 12000,
@@ -108,6 +114,7 @@ export const previewCatalog: Record<
     },
     {
       id: 'home',
+      imageKey: 'home',
       name: 'Home care bundle',
       description: 'Everyday cleaning essentials',
       price: 8500,
