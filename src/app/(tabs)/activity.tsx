@@ -74,11 +74,17 @@ export default function ActivityScreen() {
             </Text>
             {requests.map((request) => {
               const service = getService(request.service)!;
+              const label =
+                request.parcelDirection === 'receive'
+                  ? 'Incoming parcel'
+                  : request.parcelDirection === 'send'
+                    ? 'Outgoing parcel'
+                    : service.label;
               return (
                 <Pressable
                   key={request.id}
                   accessibilityRole="button"
-                  accessibilityLabel={`View ${service.label} to ${request.destination}`}
+                  accessibilityLabel={`View ${label} to ${request.destination}`}
                   onPress={() =>
                     router.push({
                       pathname: '/request/[id]',
@@ -93,7 +99,7 @@ export default function ActivityScreen() {
                     </View>
                     <View className="flex-1">
                       <Text className="text-sm font-bold text-foreground">
-                        {service.label}
+                        {label}
                       </Text>
                       <Text className="mt-1 text-xs text-muted-foreground">
                         {new Date(request.createdAt).toLocaleDateString(

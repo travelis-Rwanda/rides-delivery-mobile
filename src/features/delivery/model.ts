@@ -1,10 +1,13 @@
 import { getService, previewCatalog, type ServiceId } from './services';
 import { getMerchant } from '../merchants/catalog';
 
+export type ParcelDirection = 'send' | 'receive';
+
 export type DeliveryRequest = {
   id: string;
   service: ServiceId;
   merchantId?: string;
+  parcelDirection?: ParcelDirection;
   pickup: string;
   destination: string;
   description: string;
@@ -76,7 +79,10 @@ export function validateRequest(
   if (!request.destination.trim())
     errors.destination = 'Enter a delivery address.';
   if (!merchantOrder && !request.description.trim())
-    errors.description = 'Tell us what you would like to send.';
+    errors.description =
+      request.parcelDirection === 'receive'
+        ? 'Tell us what the sender is handing over.'
+        : 'Tell us what you would like to send.';
   if (merchantOrder && selectedItems(request).length === 0)
     errors.items = 'Add at least one item to continue.';
   if (
@@ -95,6 +101,9 @@ export function isDeliveryRequest(value: unknown): value is DeliveryRequest {
     typeof r.id === 'string' &&
     !!r.id &&
     !!getService(r.service) &&
+    (r.parcelDirection === undefined ||
+      (r.service === 'parcel' &&
+        (r.parcelDirection === 'send' || r.parcelDirection === 'receive'))) &&
     (r.merchantId === undefined ||
       (typeof r.merchantId === 'string' &&
         !!getMerchant(r.merchantId, r.service))) &&

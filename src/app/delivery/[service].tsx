@@ -19,6 +19,7 @@ import { useDelivery } from '../../features/delivery/DeliveryProvider';
 import {
   validateRequest,
   type DeliveryRequest,
+  type ParcelDirection,
 } from '../../features/delivery/model';
 import {
   formatMoney,
@@ -42,10 +43,12 @@ export default function ServiceRoute() {
     service: serviceId,
     id,
     merchant: merchantId,
+    direction,
   } = useLocalSearchParams<{
     service: string;
     id?: string;
     merchant?: string;
+    direction?: string;
   }>();
   const service = getService(serviceId);
   const { requests, loading } = useDelivery();
@@ -126,12 +129,19 @@ export default function ServiceRoute() {
         }}
       />
     );
+  const parcelDirection: ParcelDirection | undefined =
+    service.id === 'parcel'
+      ? (existing ? existing.parcelDirection : direction) === 'receive'
+        ? 'receive'
+        : 'send'
+      : undefined;
   return (
     <ServiceForm
-      key={`${service.id}-${merchant?.id ?? 'legacy'}-${existing?.id ?? 'new'}`}
+      key={`${service.id}-${merchant?.id ?? parcelDirection ?? 'standard'}-${existing?.id ?? 'new'}`}
       service={service}
       existing={existing}
       merchant={merchant}
+      parcelDirection={parcelDirection}
     />
   );
 }
@@ -140,14 +150,17 @@ function ServiceForm({
   service,
   existing,
   merchant,
+  parcelDirection,
 }: {
   service: Service;
   existing?: DeliveryRequest;
   merchant?: Merchant;
+  parcelDirection?: ParcelDirection;
 }) {
   const palette = usePalette();
   const { save, loading, loadError } = useDelivery();
   const merchantOrder = service.id === 'restaurant' || service.id === 'shop';
+  const receiving = parcelDirection === 'receive';
   const cart = useMerchantCart(
     merchant?.id,
     existing?.id,
@@ -163,6 +176,7 @@ function ServiceForm({
         id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`,
         service: service.id,
         ...(merchant ? { merchantId: merchant.id } : {}),
+        ...(parcelDirection ? { parcelDirection } : {}),
         pickup: merchantOrder
           ? (merchant?.name ??
             (service.id === 'restaurant' ? 'Sample restaurant' : 'Sample shop'))
@@ -230,7 +244,17 @@ function ServiceForm({
 
   return (
     <Page avoidKeyboard>
-      <Header title={merchant ? 'Delivery details' : service.label} />
+      <Header
+        title={
+          parcelDirection
+            ? receiving
+              ? 'Receive a parcel'
+              : 'Send a parcel'
+            : merchant
+              ? 'Delivery details'
+              : service.label
+        }
+      />
       <PageScroll>
         <StepIndicator step={2} />
         <View className="mb-6">
@@ -251,9 +275,11 @@ function ServiceForm({
                   : 'Let’s plan your delivery.'}
             </Text>
             <Text className="mt-2 text-[12px] leading-5 text-muted-foreground">
-              {merchant
-                ? `Your basket from ${merchant.name}.`
-                : service.description}
+              {receiving
+                ? 'Tell us where to collect the parcel and where to bring it.'
+                : merchant
+                  ? `Your basket from ${merchant.name}.`
+                  : service.description}
             </Text>
           </View>
         </View>
@@ -442,7 +468,11 @@ function ServiceForm({
                 {service.id === 'cargo' ? 'Your load' : 'Your parcel'}
               </Text>
               <Field
-                label="What are you sending?"
+                label={
+                  receiving
+                    ? 'What are you receiving?'
+                    : 'What are you sending?'
+                }
                 placeholder={
                   service.id === 'cargo'
                     ? 'e.g. Furniture, 3 pieces'
@@ -484,7 +514,9 @@ function ServiceForm({
             {service.id === 'parcel' && (
               <View>
                 <Text className="mb-3 text-sm font-medium text-foreground">
-                  How should it start?
+                  {receiving
+                    ? 'How will the sender hand it over?'
+                    : 'How should it start?'}
                 </Text>
                 <View className="flex-row gap-2">
                   {(
@@ -546,7 +578,9 @@ function ServiceForm({
               label={
                 form.method === 'collection'
                   ? 'Collection point'
-                  : 'Pickup address'
+                  : receiving
+                    ? 'Sender’s pickup address'
+                    : 'Pickup address'
               }
               placeholder={
                 form.method === 'collection'
@@ -561,7 +595,7 @@ function ServiceForm({
             />
           )}
           <Field
-            label="Delivery address"
+            label={receiving ? 'Your delivery address' : 'Delivery address'}
             placeholder="Area, street, building or landmark"
             value={form.destination}
             onChangeText={(text) => update('destination', text)}

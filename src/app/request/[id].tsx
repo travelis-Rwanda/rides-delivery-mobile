@@ -105,7 +105,11 @@ export default function ReviewScreen() {
             </View>
             <View className="flex-1">
               <Text className="text-base font-bold text-foreground">
-                {service.label}
+                {request.parcelDirection === 'receive'
+                  ? 'Receive a parcel'
+                  : request.parcelDirection === 'send'
+                    ? 'Send a parcel'
+                    : service.label}
               </Text>
               <Text className="mt-0.5 text-xs text-muted-foreground">
                 {request.method === 'collection'

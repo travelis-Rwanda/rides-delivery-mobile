@@ -82,3 +82,14 @@ test('stored requests reject corrupt data, invalid services, and unsafe quantiti
   assert.equal(getService(['parcel']), undefined);
   assert.equal(getService('invalid'), undefined);
 });
+
+test('saved parcel requests support receiving and older requests without a direction', () => {
+  const received = request({ parcelDirection: 'receive' });
+  assert.ok(isDeliveryRequest(JSON.parse(JSON.stringify(received))));
+  assert.ok(isDeliveryRequest(request()));
+  assert.equal(
+    isDeliveryRequest({ ...received, parcelDirection: 'other' }),
+    false,
+  );
+  assert.equal(isDeliveryRequest({ ...received, service: 'cargo' }), false);
+});
