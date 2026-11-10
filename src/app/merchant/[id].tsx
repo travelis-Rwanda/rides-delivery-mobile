@@ -12,7 +12,7 @@ import {
   Page,
   PageScroll,
 } from '../../components/ui/primitives';
-import { formatMoney } from '../../features/delivery/services';
+import { formatMoney, stockLimit } from '../../features/delivery/services';
 import { useDelivery } from '../../features/delivery/DeliveryProvider';
 import { useMerchantCart } from '../../features/merchants/MerchantCartProvider';
 import {
@@ -90,6 +90,9 @@ function MerchantMenu({
     [merchant.location, merchant.name],
   );
   const summary = basketSummary(merchant, quantities);
+  const hasStockIssue = merchant.products.some(
+    (item) => quantities[item.id] > stockLimit(item),
+  );
   const products = merchant.products.filter((item) =>
     `${item.name} ${item.description}`
       .toLocaleLowerCase()
@@ -105,6 +108,7 @@ function MerchantMenu({
       <PageScroll>
         <CatalogImage
           imageKey={merchant.cover}
+          previewLabel={merchant.name}
           style={{ height: 160, borderRadius: 24, marginTop: 4 }}
         />
         <View className="mb-5 mt-4">
@@ -211,7 +215,7 @@ function MerchantMenu({
         </View>
       </PageScroll>
       <Footer>
-        {summary.count > 0 && (
+        {summary.count > 0 && !hasStockIssue && (
           <View className="mb-1 flex-row justify-between gap-3">
             <Text className="text-[11px] text-muted-foreground">
               {summary.count} {summary.count === 1 ? 'item' : 'items'} in your
@@ -230,7 +234,7 @@ function MerchantMenu({
                 : 'Continue to delivery'
               : 'Add items to your basket'
           }
-          disabled={summary.count === 0}
+          disabled={summary.count === 0 || hasStockIssue}
           onPress={() => {
             if (editing && router.canGoBack()) {
               router.back();
@@ -247,9 +251,11 @@ function MerchantMenu({
           }}
         />
         <Text className="text-center text-[10px] leading-4 text-muted-foreground">
-          {summary.count
-            ? 'Transport fare and service fee shown separately at review.'
-            : 'Choose something you like to get started.'}
+          {hasStockIssue
+            ? 'Adjust your basket to match available stock.'
+            : summary.count
+              ? 'Transport fare and service fee shown separately at review.'
+              : 'Choose something you like to get started.'}
         </Text>
       </Footer>
     </Page>

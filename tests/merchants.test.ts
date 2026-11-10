@@ -33,22 +33,22 @@ test('directories search business names and products within the selected service
   assert.equal(getMerchant(['daily-market']), undefined);
 });
 
-test('basket counts and subtotals use only that business’s products and bounded quantities', () => {
+test('basket counts and subtotals allow more than 20 units of an available product', () => {
   const merchant = getMerchant('mango-kitchen')!;
   const quantities = {
-    'mango-burger': 2,
+    'mango-burger': 21,
     'mango-coffee': 1,
     'bun-burger': 3,
     'mango-bowl': 21,
     'mango-chicken': -1,
   };
   assert.deepEqual(sanitiseBasket(merchant, quantities), {
-    'mango-burger': 2,
+    'mango-burger': 21,
     'mango-coffee': 1,
   });
   assert.deepEqual(basketSummary(merchant, quantities), {
-    count: 3,
-    subtotal: 13000,
+    count: 22,
+    subtotal: 117500,
   });
   assert.deepEqual(basketSummary(merchant, { 'mango-burger': 0.5 }), {
     count: 0,
@@ -69,6 +69,66 @@ test('changing basket quantities invalidates a previously confirmed preview', ()
     sameMerchantBasket(merchant, original, { ...original, 'mango-bowl': 1 }),
     false,
   );
+});
+
+test('out-of-stock items stay readable in saved requests but cannot be added to a basket', () => {
+  const merchant = getMerchant('mango-kitchen')!;
+  const quantities = { 'mango-bowl': 1, 'mango-burger': 1 };
+  const request: DeliveryRequest = {
+    id: 'saved-before-stock-change',
+    service: 'restaurant',
+    merchantId: merchant.id,
+    pickup: merchant.name,
+    destination: 'Sample delivery address',
+    description: '',
+    method: 'pickup',
+    size: 'Small',
+    notes: '',
+    quantities,
+    createdAt: '2026-11-08T12:00:00Z',
+    previewConfirmed: false,
+  };
+
+  assert.ok(isDeliveryRequest(request));
+  assert.match(validateRequest(request).items, /available stock/);
+  assert.deepEqual(sanitiseBasket(merchant, quantities), { 'mango-burger': 1 });
+  assert.deepEqual(basketSummary(merchant, quantities), {
+    count: 1,
+    subtotal: 5500,
+  });
+});
+
+test('shop baskets use each product’s stock and stale drafts must be corrected', () => {
+  const merchant = getMerchant('daily-market')!;
+  const quantities = {
+    'daily-produce': 9,
+    'daily-pantry': 32,
+    'daily-bread': 1,
+  };
+  const available = { 'daily-produce': 8, 'daily-pantry': 32 };
+  const request: DeliveryRequest = {
+    id: 'shop-stock-preview',
+    service: 'shop',
+    merchantId: merchant.id,
+    pickup: merchant.name,
+    destination: 'Sample delivery address',
+    description: '',
+    method: 'pickup',
+    size: 'Small',
+    notes: '',
+    quantities,
+    createdAt: '2026-11-08T12:00:00Z',
+    previewConfirmed: false,
+  };
+
+  assert.deepEqual(sanitiseBasket(merchant, quantities), available);
+  assert.deepEqual(basketSummary(merchant, quantities), {
+    count: 40,
+    subtotal: 440000,
+  });
+  assert.ok(isDeliveryRequest(request));
+  assert.match(validateRequest(request).items, /available stock/);
+  assert.deepEqual(validateRequest({ ...request, quantities: available }), {});
 });
 
 test('business and product IDs are unique and every photo is bundled', () => {
@@ -104,14 +164,14 @@ test('a saved merchant request retains correct prices and rejects another busine
     method: 'pickup',
     size: 'Small',
     notes: '',
-    quantities: { 'mango-chicken': 2 },
+    quantities: { 'mango-chicken': 21 },
     createdAt: '2026-11-08T12:00:00Z',
     previewConfirmed: false,
   };
   assert.equal(isDeliveryRequest(JSON.parse(JSON.stringify(request))), true);
   assert.deepEqual(validateRequest(request), {});
-  assert.equal(previewEstimate(request).subtotal, 13000);
-  assert.equal(previewEstimate(request).total, 15000);
+  assert.equal(previewEstimate(request).subtotal, 136500);
+  assert.equal(previewEstimate(request).total, 138500);
   assert.equal(
     isDeliveryRequest({ ...request, merchantId: 'daily-market' }),
     false,

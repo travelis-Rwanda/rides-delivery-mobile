@@ -27,6 +27,7 @@ import {
   formatMoney,
   getService,
   previewCatalog,
+  stockLimit,
   type Service,
 } from '../../features/delivery/services';
 import { usePalette } from '../../hooks/usePalette';
@@ -387,6 +388,7 @@ function ServiceForm({
               <View key={item.id} className="mb-3 flex-row items-center gap-3">
                 <CatalogImage
                   imageKey={item.imageKey}
+                  previewLabel={item.name}
                   style={{ width: 56, height: 56, borderRadius: 12 }}
                 />
                 <View className="flex-1">
@@ -396,6 +398,13 @@ function ServiceForm({
                   <Text className="mt-1 text-[10px] text-muted-foreground">
                     Qty {item.quantity}
                   </Text>
+                  {item.quantity > stockLimit(item) && (
+                    <Text className="mt-1 text-xs font-medium text-destructive">
+                      {stockLimit(item) === 0
+                        ? 'Out of stock'
+                        : 'Reduce quantity to continue'}
+                    </Text>
+                  )}
                 </View>
                 <Text className="text-[11px] font-medium text-foreground">
                   {formatMoney(item.price * item.quantity)}
@@ -448,10 +457,17 @@ function ServiceForm({
             </View>
             {catalog.map((item) => {
               const quantity = form.quantities[item.id] ?? 0;
+              const available = stockLimit(item);
+              const canAdd =
+                Number.isSafeInteger(quantity + 1) && quantity < available;
               const changeQuantity = (amount: number) => {
+                if (amount > 0 && !canAdd) return;
+                const nextQuantity = quantity + amount;
+                if (!Number.isSafeInteger(nextQuantity) || nextQuantity < 0)
+                  return;
                 update('quantities', {
                   ...form.quantities,
-                  [item.id]: Math.max(0, Math.min(20, quantity + amount)),
+                  [item.id]: nextQuantity,
                 });
                 setErrors((current) => ({ ...current, items: '' }));
               };
@@ -460,6 +476,7 @@ function ServiceForm({
                   <View className="flex-row items-start gap-3">
                     <CatalogImage
                       imageKey={item.imageKey}
+                      previewLabel={item.name}
                       style={{ width: 72, height: 72, borderRadius: 14 }}
                     />
                     <View className="flex-1">
@@ -469,6 +486,18 @@ function ServiceForm({
                       <Text className="mt-1 text-xs leading-5 text-muted-foreground">
                         {item.description}
                       </Text>
+                      {quantity >= available && (
+                        <Text
+                          accessibilityLiveRegion="polite"
+                          className={`mt-1 text-xs ${available === 0 || quantity > available ? 'text-destructive' : 'text-muted-foreground'}`}
+                        >
+                          {available === 0
+                            ? 'Out of stock'
+                            : quantity > available
+                              ? 'Reduce quantity to continue'
+                              : 'Stock limit reached'}
+                        </Text>
+                      )}
                     </View>
                   </View>
                   <View className="mt-3 flex-row items-center justify-between">
@@ -499,10 +528,10 @@ function ServiceForm({
                       <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={`Add one ${item.name}`}
-                        disabled={quantity === 20}
-                        accessibilityState={{ disabled: quantity === 20 }}
+                        disabled={!canAdd}
+                        accessibilityState={{ disabled: !canAdd }}
                         onPress={() => changeQuantity(1)}
-                        className={`h-11 w-11 items-center justify-center rounded-xl bg-secondary active:opacity-60 ${quantity === 20 ? 'opacity-30' : ''}`}
+                        className={`h-11 w-11 items-center justify-center rounded-xl bg-secondary active:opacity-60 ${canAdd ? '' : 'opacity-30'}`}
                       >
                         <Icon name="plus" size={17} color={palette.primary} />
                       </Pressable>

@@ -61,7 +61,13 @@ export type CatalogItem = {
   price: number;
   icon: 'food' | 'shop';
   imageKey?: string;
+  outOfStock?: boolean;
+  stockQuantity?: number;
 };
+
+export function stockLimit(item: CatalogItem) {
+  return item.outOfStock ? 0 : (item.stockQuantity ?? Infinity);
+}
 
 // Illustrative catalogue and charges for the UI preview. These must be replaced
 // by merchant and quote APIs before real ordering can be enabled.
@@ -98,6 +104,7 @@ export const previewCatalog: Record<
   shop: [
     {
       id: 'produce',
+      stockQuantity: 8,
       imageKey: 'produce',
       name: 'Fresh produce basket',
       description: 'A selection of everyday fruit and vegetables',
@@ -106,6 +113,7 @@ export const previewCatalog: Record<
     },
     {
       id: 'pantry',
+      stockQuantity: 32,
       imageKey: 'pantry',
       name: 'Pantry essentials',
       description: 'Rice, beans, and cooking oil',
@@ -114,6 +122,7 @@ export const previewCatalog: Record<
     },
     {
       id: 'home',
+      stockQuantity: 12,
       imageKey: 'home',
       name: 'Home care bundle',
       description: 'Everyday cleaning essentials',
