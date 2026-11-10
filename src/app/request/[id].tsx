@@ -16,7 +16,11 @@ import {
 } from '../../components/ui/primitives';
 import { useDelivery } from '../../features/delivery/DeliveryProvider';
 import { previewEstimate, selectedItems } from '../../features/delivery/model';
-import { formatMoney, getService } from '../../features/delivery/services';
+import {
+  formatMoney,
+  getService,
+  stockLimit,
+} from '../../features/delivery/services';
 import { usePalette } from '../../hooks/usePalette';
 import { CatalogImage } from '../../features/merchants/components/CatalogImage';
 import { getMerchant } from '../../features/merchants/catalog';
@@ -70,6 +74,9 @@ export default function ReviewScreen() {
   const service = getService(request.service)!;
   const estimate = previewEstimate(request);
   const items = selectedItems(request);
+  const needsStockUpdate =
+    !request.previewConfirmed &&
+    items.some((item) => item.quantity > stockLimit(item));
   const merchant = getMerchant(request.merchantId, request.service);
   const pickupPoint = request.pickupPoint ?? merchant?.location;
   const deliveryPoint = request.destinationPoint;
@@ -83,7 +90,7 @@ export default function ReviewScreen() {
       : request.roadRoute;
 
   async function confirm() {
-    if (!request) return;
+    if (!request || needsStockUpdate) return;
     setSaving(true);
     setError('');
     try {
@@ -229,6 +236,7 @@ export default function ReviewScreen() {
               <View key={item.id} className="flex-row items-start gap-3">
                 <CatalogImage
                   imageKey={item.imageKey}
+                  previewLabel={item.name}
                   style={{ width: 44, height: 44, borderRadius: 10 }}
                 />
                 <View className="h-7 w-7 items-center justify-center rounded-lg bg-muted">
@@ -236,14 +244,31 @@ export default function ReviewScreen() {
                     {item.quantity}×
                   </Text>
                 </View>
-                <Text className="flex-1 text-sm leading-6 text-foreground">
-                  {item.name}
-                </Text>
+                <View className="flex-1">
+                  <Text className="text-sm leading-6 text-foreground">
+                    {item.name}
+                  </Text>
+                  {needsStockUpdate && item.quantity > stockLimit(item) && (
+                    <Text className="text-xs font-medium text-destructive">
+                      {stockLimit(item) === 0
+                        ? 'Out of stock'
+                        : 'Reduce quantity to continue'}
+                    </Text>
+                  )}
+                </View>
                 <Text className="text-sm leading-6 text-muted-foreground">
                   {formatMoney(item.price * item.quantity)}
                 </Text>
               </View>
             ))}
+            {needsStockUpdate && (
+              <Text
+                accessibilityRole="alert"
+                className="text-xs leading-5 text-destructive"
+              >
+                Edit your basket to match available stock before confirming.
+              </Text>
+            )}
           </View>
         )}
         <View className="mb-4 rounded-[20px] bg-card p-5">
@@ -329,6 +354,7 @@ export default function ReviewScreen() {
               : void confirm()
           }
           loading={saving}
+          disabled={needsStockUpdate}
           icon="check"
         />
         <Text className="text-center text-xs leading-5 text-muted-foreground">

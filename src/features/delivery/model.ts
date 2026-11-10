@@ -1,4 +1,9 @@
-import { getService, previewCatalog, type ServiceId } from './services';
+import {
+  getService,
+  previewCatalog,
+  stockLimit,
+  type ServiceId,
+} from './services';
 import { getMerchant } from '../merchants/catalog';
 import {
   coordinateKey,
@@ -75,9 +80,8 @@ export function validateRequest(
     Object.entries(request.quantities).some(
       ([id, quantity]) =>
         !merchant.products.some((item) => item.id === id) ||
-        !Number.isInteger(quantity) ||
-        quantity < 0 ||
-        quantity > 20,
+        !Number.isSafeInteger(quantity) ||
+        quantity < 0,
     )
   )
     errors.items = 'Check the items and quantities in this business’s basket.';
@@ -93,8 +97,14 @@ export function validateRequest(
       request.parcelDirection === 'receive'
         ? 'Tell us what the sender is handing over.'
         : 'Tell us what you would like to send.';
-  if (merchantOrder && selectedItems(request).length === 0)
-    errors.items = 'Add at least one item to continue.';
+  if (merchantOrder) {
+    const items = selectedItems(request);
+    if (items.some((item) => item.quantity > stockLimit(item)))
+      errors.items =
+        'Adjust your basket to match available stock before continuing.';
+    else if (items.length === 0)
+      errors.items = 'Add at least one item to continue.';
+  }
   const sameStop =
     request.pickupPoint && request.destinationPoint
       ? coordinateKey(request.pickupPoint) ===
@@ -138,9 +148,8 @@ export function isDeliveryRequest(value: unknown): value is DeliveryRequest {
     Object.values(r.quantities).every(
       (quantity) =>
         typeof quantity === 'number' &&
-        Number.isInteger(quantity) &&
-        quantity >= 0 &&
-        quantity <= 20,
+        Number.isSafeInteger(quantity) &&
+        quantity >= 0,
     ) &&
     (r.merchantId === undefined ||
       Object.keys(r.quantities).every((id) =>

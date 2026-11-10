@@ -75,7 +75,7 @@ test('stored requests reject corrupt data, invalid services, and unsafe quantiti
     request({ createdAt: 'not-a-date' }),
     request({ quantities: { chicken: -1 } }),
     request({ quantities: { chicken: 1.5 } }),
-    request({ quantities: { chicken: 21 } }),
+    request({ quantities: { chicken: Number.MAX_SAFE_INTEGER + 1 } }),
     { ...request(), previewConfirmed: 'true' },
   ])
     assert.equal(isDeliveryRequest(invalid), false);

@@ -1,4 +1,4 @@
-import type { CatalogItem } from '../delivery/services';
+import { stockLimit, type CatalogItem } from '../delivery/services';
 import { kigaliPlaces, type Place } from '../maps/places';
 
 export type MerchantService = 'restaurant' | 'shop';
@@ -21,14 +21,32 @@ const food = (
   description: string,
   price: number,
   imageKey: string,
-): CatalogItem => ({ id, name, description, price, imageKey, icon: 'food' });
+  outOfStock = false,
+): CatalogItem => ({
+  id,
+  name,
+  description,
+  price,
+  imageKey,
+  outOfStock,
+  icon: 'food',
+});
 const goods = (
   id: string,
   name: string,
   description: string,
   price: number,
   imageKey: string,
-): CatalogItem => ({ id, name, description, price, imageKey, icon: 'shop' });
+  stockQuantity: number,
+): CatalogItem => ({
+  id,
+  name,
+  description,
+  price,
+  imageKey,
+  stockQuantity,
+  icon: 'shop',
+});
 
 // Fictional businesses and illustrative prices until merchant APIs are connected.
 export const merchants: readonly Merchant[] = [
@@ -57,6 +75,7 @@ export const merchants: readonly Merchant[] = [
         'Seasonal vegetables, grains, and avocado.',
         4500,
         'bowl',
+        true,
       ),
       food(
         'mango-burger',
@@ -162,6 +181,7 @@ export const merchants: readonly Merchant[] = [
         'A mixed selection of seasonal vegetables.',
         7000,
         'produce',
+        8,
       ),
       goods(
         'daily-pantry',
@@ -169,6 +189,7 @@ export const merchants: readonly Merchant[] = [
         'A selection of everyday kitchen staples.',
         12000,
         'pantry',
+        32,
       ),
       goods(
         'daily-bread',
@@ -176,6 +197,7 @@ export const merchants: readonly Merchant[] = [
         'One freshly baked, golden loaf.',
         3500,
         'bread',
+        0,
       ),
     ],
   },
@@ -197,6 +219,7 @@ export const merchants: readonly Merchant[] = [
         'A freshly baked loaf for your table.',
         4500,
         'bread',
+        12,
       ),
       goods(
         'corner-pantry',
@@ -204,6 +227,7 @@ export const merchants: readonly Merchant[] = [
         'A selection of cupboard essentials.',
         10000,
         'pantry',
+        6,
       ),
       goods(
         'corner-coffee',
@@ -211,6 +235,7 @@ export const merchants: readonly Merchant[] = [
         'A freshly prepared cup to take with you.',
         2500,
         'coffee',
+        24,
       ),
     ],
   },
@@ -232,6 +257,7 @@ export const merchants: readonly Merchant[] = [
         'A curated selection of everyday care essentials.',
         8500,
         'home',
+        14,
       ),
       goods(
         'home-clean',
@@ -239,6 +265,7 @@ export const merchants: readonly Merchant[] = [
         'A spray cleaner and cleaning supplies.',
         5000,
         'cleaning',
+        27,
       ),
     ],
   },
@@ -287,9 +314,9 @@ export function sanitiseBasket(
   return Object.fromEntries(
     merchant.products.flatMap((item) => {
       const quantity = values[item.id];
-      return Number.isInteger(quantity) && quantity > 0 && quantity <= 20
-        ? [[item.id, quantity]]
-        : [];
+      if (!Number.isSafeInteger(quantity) || quantity <= 0) return [];
+      const availableQuantity = Math.min(quantity, stockLimit(item));
+      return availableQuantity > 0 ? [[item.id, availableQuantity]] : [];
     }),
   );
 }
