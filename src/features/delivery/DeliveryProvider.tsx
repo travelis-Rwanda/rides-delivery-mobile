@@ -1,3 +1,4 @@
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   createContext,
@@ -20,9 +21,18 @@ type DeliveryContextValue = {
   loadError: boolean;
   reload: () => Promise<void>;
   save: (request: DeliveryRequest) => Promise<void>;
+  remove: (requestId: string) => Promise<void>;
 };
 
 const DeliveryContext = createContext<DeliveryContextValue | null>(null);
+
+// Large paths stay in memory and can be fetched again from the saved pins.
+const toArchive = (entries: DeliveryRequest[]) =>
+  entries.map((entry) =>
+    entry.roadRoute && entry.roadRoute.path.length > MAX_SAVED_ROUTE_POINTS
+      ? { ...entry, roadRoute: undefined }
+      : entry,
+  );
 
 export function DeliveryProvider({ children }: PropsWithChildren) {
   const [requests, setRequests] = useState<DeliveryRequest[]>([]);
@@ -61,24 +71,52 @@ export function DeliveryProvider({ children }: PropsWithChildren) {
         throw new Error(
           'Saved requests are unavailable. Try loading them again from Activity.',
         );
+
       if (!isDeliveryRequest(request))
         throw new Error('Please check your request details.');
+
       const write = writes.current.then(async () => {
         const next = [
           request,
           ...current.current.filter((entry) => entry.id !== request.id),
         ];
-        // Large paths stay in memory and can be fetched again from the saved pins.
-        const archive = next.map((entry) =>
-          entry.roadRoute &&
-          entry.roadRoute.path.length > MAX_SAVED_ROUTE_POINTS
-            ? { ...entry, roadRoute: undefined }
-            : entry,
+
+        await AsyncStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify(toArchive(next)),
         );
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(archive));
+
         current.current = next;
         setRequests(next);
       });
+
+      writes.current = write.catch(() => {});
+      await write;
+    },
+    [loadError, loading],
+  );
+
+  const remove = useCallback(
+    async (requestId: string) => {
+      if (loadError || loading)
+        throw new Error(
+          'Saved requests are unavailable. Try loading them again from Activity.',
+        );
+
+      const write = writes.current.then(async () => {
+        const next = current.current.filter(
+          (entry) => entry.id !== requestId,
+        );
+
+        await AsyncStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify(toArchive(next)),
+        );
+
+        current.current = next;
+        setRequests(next);
+      });
+
       writes.current = write.catch(() => {});
       await write;
     },
@@ -87,7 +125,7 @@ export function DeliveryProvider({ children }: PropsWithChildren) {
 
   return (
     <DeliveryContext.Provider
-      value={{ requests, loading, loadError, reload, save }}
+      value={{ requests, loading, loadError, reload, save, remove }}
     >
       {children}
     </DeliveryContext.Provider>
@@ -96,7 +134,9 @@ export function DeliveryProvider({ children }: PropsWithChildren) {
 
 export function useDelivery() {
   const value = useContext(DeliveryContext);
+
   if (!value)
     throw new Error('useDelivery must be used inside DeliveryProvider');
+
   return value;
 }
