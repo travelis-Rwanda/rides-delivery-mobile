@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { Icon } from '../../components/ui/Icon';
@@ -23,6 +23,9 @@ import {
 import { CatalogImage } from '../../features/merchants/components/CatalogImage';
 import { ProductTile } from '../../features/merchants/components/ProductTile';
 import { SearchField } from '../../features/merchants/components/SearchField';
+import { ScrollPressable } from '../../components/ui/ScrollInteraction';
+import { MapCanvas } from '../../features/maps/components/MapCanvas';
+import { pickupColor } from '../../features/maps/components/mapTypes';
 import { usePalette } from '../../hooks/usePalette';
 
 export default function MerchantRoute() {
@@ -79,6 +82,13 @@ function MerchantMenu({
     existing?.quantities,
   );
   const [query, setQuery] = useState('');
+  const [showMap, setShowMap] = useState(false);
+  const markers = useMemo(
+    () => [
+      { point: merchant.location, title: merchant.name, color: pickupColor },
+    ],
+    [merchant.location, merchant.name],
+  );
   const summary = basketSummary(merchant, quantities);
   const products = merchant.products.filter((item) =>
     `${item.name} ${item.description}`
@@ -115,6 +125,37 @@ function MerchantMenu({
           <Text className="mt-2 text-[12px] leading-5 text-muted-foreground">
             {merchant.description}
           </Text>
+        </View>
+        <View className="mb-5 overflow-hidden rounded-[18px] border border-border bg-card">
+          <ScrollPressable
+            accessibilityRole="button"
+            accessibilityLabel={showMap ? 'Hide pickup map' : 'Show pickup map'}
+            accessibilityState={{ expanded: showMap }}
+            onPress={() => setShowMap((visible) => !visible)}
+            className="min-h-16 flex-row items-center gap-3 p-3"
+          >
+            <View className="h-10 w-10 items-center justify-center rounded-xl bg-secondary">
+              <Icon name="pin" size={19} color={palette.primary} />
+            </View>
+            <View className="flex-1">
+              <Text className="text-[10px] font-medium text-muted-foreground">
+                SAMPLE PICKUP POINT
+              </Text>
+              <Text className="mt-1 text-sm font-medium text-foreground">
+                {merchant.location.label}
+              </Text>
+            </View>
+            <Text className="text-xs font-medium text-primary">
+              {showMap ? 'Hide map' : 'View map'}
+            </Text>
+          </ScrollPressable>
+          {showMap && (
+            <MapCanvas
+              height={300}
+              label={`Map of ${merchant.name}’s sample pickup point`}
+              markers={markers}
+            />
+          )}
         </View>
         <SearchField
           value={query}

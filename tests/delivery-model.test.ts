@@ -82,3 +82,39 @@ test('stored requests reject corrupt data, invalid services, and unsafe quantiti
   assert.equal(getService(['parcel']), undefined);
   assert.equal(getService('invalid'), undefined);
 });
+
+test('saved parcel requests support receiving and older requests without a direction', () => {
+  const received = request({ parcelDirection: 'receive' });
+  assert.ok(isDeliveryRequest(JSON.parse(JSON.stringify(received))));
+  assert.ok(isDeliveryRequest(request()));
+  assert.equal(
+    isDeliveryRequest({ ...received, parcelDirection: 'other' }),
+    false,
+  );
+  assert.equal(isDeliveryRequest({ ...received, service: 'cargo' }), false);
+});
+
+test('a saved road route requires two valid stops and survives a storage round trip', () => {
+  const pickupPoint = { latitude: -1.9547, longitude: 30.0947 };
+  const destinationPoint = { latitude: -1.9358, longitude: 30.0846 };
+  const mapped = request({
+    pickup: 'Dropped pin',
+    destination: 'Dropped pin',
+    pickupPoint,
+    destinationPoint,
+    roadRoute: {
+      distanceMeters: 3000,
+      durationSeconds: 360,
+      path: [pickupPoint, destinationPoint],
+    },
+  });
+  assert.ok(isDeliveryRequest(JSON.parse(JSON.stringify(mapped))));
+  assert.deepEqual(validateRequest(mapped), {});
+  assert.ok(
+    validateRequest({ ...mapped, destinationPoint: pickupPoint }).destination,
+  );
+  assert.equal(
+    isDeliveryRequest({ ...mapped, destinationPoint: undefined }),
+    false,
+  );
+});

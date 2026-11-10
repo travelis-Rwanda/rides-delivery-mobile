@@ -108,17 +108,7 @@ function ParcelScene() {
 
 export function ParcelHero() {
   return (
-    <ScrollPressable
-      accessibilityRole="button"
-      accessibilityLabel="Send a parcel. From your door to theirs."
-      onPress={() =>
-        router.navigate({
-          pathname: '/delivery/[service]',
-          params: { service: 'parcel' },
-        })
-      }
-      className="overflow-hidden rounded-[24px]"
-    >
+    <View className="overflow-hidden rounded-[24px]">
       <LinearGradient
         colors={['#007AFF', '#1956EF', '#2739CE']}
         start={{ x: 0, y: 0 }}
@@ -135,17 +125,45 @@ export function ParcelHero() {
           <Text className="text-[27px] font-medium leading-[33px] tracking-[-0.8px] text-white">
             Parcels,{`\n`}sorted.
           </Text>
-          <Text className="mt-2 text-[12px] leading-[19px] text-white/80">
-            From your door to theirs.
+          <Text className="mt-2 text-[12px] leading-[19px] text-white/90">
+            Send something out or get it brought to you.
           </Text>
-          <View className="mt-5 self-start flex-row items-center gap-2 rounded-xl bg-white px-3.5 py-3">
-            <Text className="text-[12px] font-medium text-[#145FE6]">
-              Send a parcel
+        </View>
+        <View className="mt-5 flex-row gap-2">
+          <ScrollPressable
+            accessibilityRole="button"
+            accessibilityLabel="Send a parcel"
+            onPress={() =>
+              router.navigate({
+                pathname: '/delivery/[service]',
+                params: { service: 'parcel', direction: 'send' },
+              })
+            }
+            className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-white px-2 py-3"
+          >
+            <Icon name="arrow" size={16} color="#145FE6" />
+            <Text className="shrink text-center text-[12px] font-medium text-[#145FE6]">
+              Send
             </Text>
-            <Icon name="arrow" size={15} color="#145FE6" />
-          </View>
+          </ScrollPressable>
+          <ScrollPressable
+            accessibilityRole="button"
+            accessibilityLabel="Receive a parcel"
+            onPress={() =>
+              router.navigate({
+                pathname: '/delivery/[service]',
+                params: { service: 'parcel', direction: 'receive' },
+              })
+            }
+            className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-xl border border-white/40 bg-[#1747CC] px-2 py-3"
+          >
+            <Icon name="back" size={16} color="#FFFFFF" />
+            <Text className="shrink text-center text-[12px] font-medium text-white">
+              Receive
+            </Text>
+          </ScrollPressable>
         </View>
       </LinearGradient>
-    </ScrollPressable>
+    </View>
   );
 }

@@ -48,9 +48,12 @@ export function MerchantCard({
               <Text className="text-[24px] font-medium leading-8 text-white">
                 {merchant.name}
               </Text>
-              <Text className="mt-1 text-[11px] leading-[18px] text-white/85">
-                {merchant.tagline}
-              </Text>
+              <View className="mt-1 flex-row items-center gap-1.5">
+                <Icon name="pin" color="#FFFFFF" size={13} />
+                <Text className="shrink text-[11px] leading-[18px] text-white">
+                  {merchant.location.label}
+                </Text>
+              </View>
             </View>
             <View className="h-11 w-11 items-center justify-center rounded-full bg-white">
               <Icon name="arrow" color="#141414" size={20} />
@@ -77,9 +80,12 @@ export function MerchantCard({
         <Text className="text-[11px] leading-[18px] text-muted-foreground">
           {merchant.tagline}
         </Text>
-        <Text className="text-[10px] text-primary">
-          {merchant.category} · {merchant.products.length} items
-        </Text>
+        <View className="flex-row items-center gap-1">
+          <Icon name="pin" color={palette.primary} size={12} />
+          <Text className="shrink text-[10px] text-primary">
+            {merchant.location.label}
+          </Text>
+        </View>
       </View>
       <Icon name="chevron" size={17} color={palette['muted-foreground']} />
     </ScrollPressable>

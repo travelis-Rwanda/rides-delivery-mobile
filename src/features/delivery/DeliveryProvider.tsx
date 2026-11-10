@@ -12,6 +12,7 @@ import {
 import { isDeliveryRequest, type DeliveryRequest } from './model';
 
 const STORAGE_KEY = 'rides.delivery.previews.v1';
+const MAX_SAVED_ROUTE_POINTS = 5_000;
 
 type DeliveryContextValue = {
   requests: DeliveryRequest[];
@@ -67,7 +68,14 @@ export function DeliveryProvider({ children }: PropsWithChildren) {
           request,
           ...current.current.filter((entry) => entry.id !== request.id),
         ];
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        // Large paths stay in memory and can be fetched again from the saved pins.
+        const archive = next.map((entry) =>
+          entry.roadRoute &&
+          entry.roadRoute.path.length > MAX_SAVED_ROUTE_POINTS
+            ? { ...entry, roadRoute: undefined }
+            : entry,
+        );
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(archive));
         current.current = next;
         setRequests(next);
       });
