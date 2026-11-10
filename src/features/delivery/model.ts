@@ -1,5 +1,12 @@
 import { getService, previewCatalog, type ServiceId } from './services';
 import { getMerchant } from '../merchants/catalog';
+import {
+  coordinateKey,
+  isCoordinate,
+  isRoadRoute,
+  type Coordinate,
+  type RoadRoute,
+} from '../maps/places';
 
 export type ParcelDirection = 'send' | 'receive';
 
@@ -9,7 +16,10 @@ export type DeliveryRequest = {
   merchantId?: string;
   parcelDirection?: ParcelDirection;
   pickup: string;
+  pickupPoint?: Coordinate;
   destination: string;
+  destinationPoint?: Coordinate;
+  roadRoute?: RoadRoute;
   description: string;
   method: 'pickup' | 'collection';
   size: 'Small' | 'Medium' | 'Large';
@@ -85,11 +95,13 @@ export function validateRequest(
         : 'Tell us what you would like to send.';
   if (merchantOrder && selectedItems(request).length === 0)
     errors.items = 'Add at least one item to continue.';
-  if (
-    request.pickup.trim() &&
-    request.pickup.trim().toLowerCase() ===
-      request.destination.trim().toLowerCase()
-  )
+  const sameStop =
+    request.pickupPoint && request.destinationPoint
+      ? coordinateKey(request.pickupPoint) ===
+        coordinateKey(request.destinationPoint)
+      : request.pickup.trim().toLowerCase() ===
+        request.destination.trim().toLowerCase();
+  if (request.pickup.trim() && request.destination.trim() && sameStop)
     errors.destination = 'Choose a destination different from the pickup.';
   return errors;
 }
@@ -110,6 +122,12 @@ export function isDeliveryRequest(value: unknown): value is DeliveryRequest {
     ['pickup', 'destination', 'description', 'notes', 'createdAt'].every(
       (key) => typeof r[key] === 'string',
     ) &&
+    (r.pickupPoint === undefined || isCoordinate(r.pickupPoint)) &&
+    (r.destinationPoint === undefined || isCoordinate(r.destinationPoint)) &&
+    (r.roadRoute === undefined ||
+      (isCoordinate(r.pickupPoint) &&
+        isCoordinate(r.destinationPoint) &&
+        isRoadRoute(r.roadRoute))) &&
     Number.isFinite(Date.parse(r.createdAt as string)) &&
     (r.method === 'pickup' || r.method === 'collection') &&
     ['Small', 'Medium', 'Large'].includes(r.size as string) &&

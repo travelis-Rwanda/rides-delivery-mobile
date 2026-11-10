@@ -16,7 +16,9 @@ import {
   StepIndicator,
 } from '../../components/ui/primitives';
 import { useDelivery } from '../../features/delivery/DeliveryProvider';
+import { AddressField } from '../../features/delivery/components/AddressField';
 import {
+  selectedItems,
   validateRequest,
   type DeliveryRequest,
   type ParcelDirection,
@@ -36,7 +38,12 @@ import {
 } from '../../features/merchants/catalog';
 import { useMerchantCart } from '../../features/merchants/MerchantCartProvider';
 import { CatalogImage } from '../../features/merchants/components/CatalogImage';
-import { selectedItems } from '../../features/delivery/model';
+import { RoadRouteCard } from '../../features/maps/components/RoadRouteCard';
+import {
+  routeKey,
+  type Coordinate,
+  type Place,
+} from '../../features/maps/places';
 
 export default function ServiceRoute() {
   const {
@@ -170,26 +177,33 @@ function ServiceForm({
     service.id === 'restaurant' || service.id === 'shop'
       ? previewCatalog[service.id]
       : [];
-  const [details, setForm] = useState<DeliveryRequest>(
-    () =>
-      existing ?? {
-        id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`,
-        service: service.id,
-        ...(merchant ? { merchantId: merchant.id } : {}),
-        ...(parcelDirection ? { parcelDirection } : {}),
-        pickup: merchantOrder
-          ? (merchant?.name ??
-            (service.id === 'restaurant' ? 'Sample restaurant' : 'Sample shop'))
-          : '',
-        destination: '',
-        description: '',
-        method: 'pickup',
-        size: 'Small',
-        notes: '',
-        quantities: merchant ? { ...cart.quantities } : {},
-        createdAt: new Date().toISOString(),
-        previewConfirmed: false,
-      },
+  const [details, setForm] = useState<DeliveryRequest>(() =>
+    existing
+      ? {
+          ...existing,
+          pickupPoint: existing.pickupPoint ?? merchant?.location,
+        }
+      : {
+          id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`,
+          service: service.id,
+          ...(merchant ? { merchantId: merchant.id } : {}),
+          ...(parcelDirection ? { parcelDirection } : {}),
+          pickup: merchantOrder
+            ? (merchant?.name ??
+              (service.id === 'restaurant'
+                ? 'Sample restaurant'
+                : 'Sample shop'))
+            : '',
+          pickupPoint: merchant?.location,
+          destination: '',
+          description: '',
+          method: 'pickup',
+          size: 'Small',
+          notes: '',
+          quantities: merchant ? { ...cart.quantities } : {},
+          createdAt: new Date().toISOString(),
+          previewConfirmed: false,
+        },
   );
   const form = merchant
     ? {
@@ -203,7 +217,15 @@ function ServiceForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [alternatePickup, setAlternatePickup] = useState<{
+    label: string;
+    point?: Coordinate;
+  }>({ label: '' });
   const basket = selectedItems(form);
+  const tripKey =
+    form.pickupPoint && form.destinationPoint
+      ? routeKey(form.pickupPoint, form.destinationPoint)
+      : undefined;
 
   function update<K extends keyof DeliveryRequest>(
     key: K,
@@ -215,6 +237,43 @@ function ServiceForm({
       previewConfirmed: false,
     }));
     setErrors((current) => ({ ...current, [key]: '' }));
+  }
+
+  function changePickupMethod(method: DeliveryRequest['method']) {
+    if (method === form.method) return;
+    setAlternatePickup({ label: form.pickup, point: form.pickupPoint });
+    setForm((current) => ({
+      ...current,
+      method,
+      pickup: alternatePickup.label,
+      pickupPoint: alternatePickup.point,
+      roadRoute: undefined,
+      previewConfirmed: false,
+    }));
+    setErrors((current) => ({ ...current, pickup: '', destination: '' }));
+  }
+
+  function changeAddress(
+    stop: 'pickup' | 'destination',
+    value: string | Place,
+  ) {
+    const label =
+      typeof value === 'string'
+        ? value
+        : [value.label, value.detail].filter(Boolean).join(', ').slice(0, 200);
+    const point =
+      typeof value === 'string'
+        ? undefined
+        : { latitude: value.latitude, longitude: value.longitude };
+    const pointKey = stop === 'pickup' ? 'pickupPoint' : 'destinationPoint';
+    setForm((current) => ({
+      ...current,
+      [stop]: label,
+      [pointKey]: point,
+      roadRoute: undefined,
+      previewConfirmed: false,
+    }));
+    setErrors((current) => ({ ...current, [stop]: '' }));
   }
 
   async function review() {
@@ -299,6 +358,9 @@ function ServiceForm({
                 </Text>
                 <Text className="mt-1 text-[11px] text-muted-foreground">
                   {merchant.name}
+                </Text>
+                <Text className="mt-1 text-[11px] text-muted-foreground">
+                  {merchant.location.label}
                 </Text>
               </View>
               <Pressable
@@ -539,10 +601,7 @@ function ServiceForm({
                       accessibilityState={{
                         checked: form.method === method.value,
                       }}
-                      onPress={() => {
-                        update('method', method.value);
-                        update('pickup', '');
-                      }}
+                      onPress={() => changePickupMethod(method.value)}
                       className={`min-h-24 flex-1 justify-center gap-2 rounded-[16px] border p-4 ${form.method === method.value ? 'border-primary bg-secondary' : 'border-border bg-card'}`}
                     >
                       <Icon
@@ -574,7 +633,8 @@ function ServiceForm({
         </Text>
         <View className="gap-5">
           {!merchantOrder && (
-            <Field
+            <AddressField
+              key={form.method}
               label={
                 form.method === 'collection'
                   ? 'Collection point'
@@ -588,21 +648,51 @@ function ServiceForm({
                   : 'Area, street, building or landmark'
               }
               value={form.pickup}
-              onChangeText={(text) => update('pickup', text)}
+              point={form.pickupPoint}
+              onChangeText={(text) => changeAddress('pickup', text)}
+              onSelectPlace={(place) => changeAddress('pickup', place)}
               error={errors.pickup}
               maxLength={200}
               autoComplete="street-address"
+              useDeviceLocation={!receiving && form.method === 'pickup'}
+              autoFill={!existing}
             />
           )}
-          <Field
+          <AddressField
             label={receiving ? 'Your delivery address' : 'Delivery address'}
             placeholder="Area, street, building or landmark"
             value={form.destination}
-            onChangeText={(text) => update('destination', text)}
+            point={form.destinationPoint}
+            onChangeText={(text) => changeAddress('destination', text)}
+            onSelectPlace={(place) => changeAddress('destination', place)}
             error={errors.destination}
             maxLength={200}
             autoComplete="street-address"
+            useDeviceLocation={receiving}
+            autoFill={!existing}
           />
+          {form.pickupPoint && form.destinationPoint ? (
+            <RoadRouteCard
+              key={tripKey}
+              pickup={form.pickupPoint}
+              delivery={form.destinationPoint}
+              route={form.roadRoute}
+              onRoute={(roadRoute) =>
+                setForm((current) =>
+                  current.pickupPoint &&
+                  current.destinationPoint &&
+                  routeKey(current.pickupPoint, current.destinationPoint) ===
+                    tripKey
+                    ? { ...current, roadRoute }
+                    : current,
+                )
+              }
+            />
+          ) : (
+            <Text className="text-xs leading-5 text-muted-foreground">
+              Set both stops on the map to see road distance and drive time.
+            </Text>
+          )}
           <Field
             label="Delivery notes (optional)"
             placeholder="Anything helpful for your delivery"

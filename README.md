@@ -65,6 +65,30 @@ Scrolling keeps the keyboard open and preserves input focus; taps on form
 controls remain available while editing. This uses
 built-in React Native APIs and works in Expo Go.
 
+## Address search and route previews
+
+Use **Find on map** beside either address to search a street or landmark in
+Rwanda, choose a nearby result, or tap the map to place a pin. The customer’s
+side of a parcel trip can start with the phone’s current location. Sample
+restaurant and shop pickups use their assigned Kigali pins. Routes load automatically once both stops have pins, showing road distance and
+estimated driving time. Pan or zoom the larger map to inspect the route. Typing a replacement address clears the old pin and route.
+Addresses can still be entered manually, and saved requests can store the pins
+and route alongside their existing details. The route does not change the
+illustrative fare.
+
+The preview uses [Photon](https://github.com/komoot/photon) for address search
+as you type and nearby suggestions, and
+[FOSSGIS OSRM](https://routing.openstreetmap.de/about.html) for driving routes. These are low-volume demo endpoints. Use approved services
+before a production rollout. Set `EXPO_PUBLIC_ADDRESS_SEARCH_URL` to a
+Photon-compatible search endpoint and `EXPO_PUBLIC_ROAD_ROUTE_URL` to an
+OSRM-compatible driving endpoint ending in `/route/v1/driving`.
+`EXPO_PUBLIC_MAP_TILE_URL` can override the OpenStreetMap tile URL used in the web
+preview. Keep provider secrets on a server.
+
+Native maps run in Expo Go. For a standalone Android build, set
+`GOOGLE_MAPS_ANDROID_API_KEY` to a Maps SDK for Android key restricted to the
+app’s package and signing certificate, then rebuild. iOS uses Apple Maps.
+
 ## Styling
 
 The UI bundles the supplied Rides logo at `assets/brand/rides-logo.png` and the
@@ -114,3 +138,5 @@ npm test
 ```
 
 Setup follows the [NativeWind installation guide](https://www.nativewind.dev/docs/getting-started/installation).
+
+Map pins resolve nearby street/place names through Photon reverse geocoding while retaining the exact selected coordinates. Set `EXPO_PUBLIC_ADDRESS_REVERSE_URL` for a custom Photon-compatible reverse endpoint; by default it is derived from the search URL. Routes automatically share the two selected coordinates with the configured routing provider.

@@ -19,6 +19,9 @@ import { previewEstimate, selectedItems } from '../../features/delivery/model';
 import { formatMoney, getService } from '../../features/delivery/services';
 import { usePalette } from '../../hooks/usePalette';
 import { CatalogImage } from '../../features/merchants/components/CatalogImage';
+import { getMerchant } from '../../features/merchants/catalog';
+import { RoadRouteCard } from '../../features/maps/components/RoadRouteCard';
+import { routeKey, type RoadRoute } from '../../features/maps/places';
 
 export default function ReviewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -26,6 +29,10 @@ export default function ReviewScreen() {
   const palette = usePalette();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [calculatedRoute, setCalculatedRoute] = useState<{
+    key: string;
+    route: RoadRoute;
+  }>();
   const request = requests.find((entry) => entry.id === id);
   if (loading)
     return (
@@ -63,13 +70,29 @@ export default function ReviewScreen() {
   const service = getService(request.service)!;
   const estimate = previewEstimate(request);
   const items = selectedItems(request);
+  const merchant = getMerchant(request.merchantId, request.service);
+  const pickupPoint = request.pickupPoint ?? merchant?.location;
+  const deliveryPoint = request.destinationPoint;
+  const tripKey =
+    pickupPoint && deliveryPoint
+      ? `${request.id}:${routeKey(pickupPoint, deliveryPoint)}`
+      : undefined;
+  const roadRoute =
+    calculatedRoute && calculatedRoute.key === tripKey
+      ? calculatedRoute.route
+      : request.roadRoute;
 
   async function confirm() {
     if (!request) return;
     setSaving(true);
     setError('');
     try {
-      await save({ ...request, previewConfirmed: true });
+      await save({
+        ...request,
+        pickupPoint,
+        roadRoute,
+        previewConfirmed: true,
+      });
       router.replace({
         pathname: '/confirmed/[id]',
         params: { id: request.id },
@@ -146,6 +169,11 @@ export default function ReviewScreen() {
                 <Text className="text-sm font-medium leading-5 text-foreground">
                   {request.pickup}
                 </Text>
+                {merchant && (
+                  <Text className="mt-1 text-xs text-muted-foreground">
+                    {merchant.location.label}
+                  </Text>
+                )}
               </View>
             </View>
             <View className="flex-row items-start gap-3">
@@ -181,6 +209,17 @@ export default function ReviewScreen() {
             )}
           </View>
         </View>
+        {pickupPoint && deliveryPoint && tripKey && (
+          <View className="mb-4">
+            <RoadRouteCard
+              key={tripKey}
+              pickup={pickupPoint}
+              delivery={deliveryPoint}
+              route={roadRoute}
+              onRoute={(route) => setCalculatedRoute({ key: tripKey, route })}
+            />
+          </View>
+        )}
         {items.length > 0 && (
           <View className="mb-4 gap-4 rounded-[20px] bg-card p-5">
             <Text className="text-base font-bold text-foreground">
@@ -282,7 +321,7 @@ export default function ReviewScreen() {
               : 'Confirm preview'
           }
           onPress={() =>
-            request.previewConfirmed
+            request.previewConfirmed && roadRoute === request.roadRoute
               ? router.replace({
                   pathname: '/confirmed/[id]',
                   params: { id: request.id },

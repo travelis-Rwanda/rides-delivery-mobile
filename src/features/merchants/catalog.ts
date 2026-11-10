@@ -1,4 +1,5 @@
 import type { CatalogItem } from '../delivery/services';
+import { kigaliPlaces, type Place } from '../maps/places';
 
 export type MerchantService = 'restaurant' | 'shop';
 export type Merchant = {
@@ -6,6 +7,7 @@ export type Merchant = {
   service: MerchantService;
   name: string;
   category: string;
+  location: Place;
   tagline: string;
   description: string;
   cover: string;
@@ -35,6 +37,7 @@ export const merchants: readonly Merchant[] = [
     service: 'restaurant',
     name: 'Mango Kitchen',
     category: 'Kitchen',
+    location: kigaliPlaces.kimihurura,
     tagline: 'Big flavour. Everyday favourites.',
     cover: 'chicken',
     collection: 'Kitchen favourites',
@@ -76,6 +79,7 @@ export const merchants: readonly Merchant[] = [
     service: 'restaurant',
     name: 'The Green Table',
     category: 'Bowls',
+    location: kigaliPlaces.kacyiru,
     tagline: 'Feel-good food, full of colour.',
     cover: 'bowl',
     collection: 'Fresh from the kitchen',
@@ -110,6 +114,7 @@ export const merchants: readonly Merchant[] = [
     service: 'restaurant',
     name: 'Bun & Brew',
     category: 'Café',
+    location: kigaliPlaces.remera,
     tagline: 'Your next favourite lunch break.',
     cover: 'burger',
     collection: 'The good stuff',
@@ -144,6 +149,7 @@ export const merchants: readonly Merchant[] = [
     service: 'shop',
     name: 'Daily Market',
     category: 'Groceries',
+    location: kigaliPlaces.kimironko,
     tagline: 'A well-stocked day starts here.',
     cover: 'produce',
     collection: 'Everyday essentials',
@@ -178,6 +184,7 @@ export const merchants: readonly Merchant[] = [
     service: 'shop',
     name: 'The Corner Pantry',
     category: 'Pantry',
+    location: kigaliPlaces.nyamirambo,
     tagline: 'Good things for your kitchen.',
     cover: 'bread',
     collection: 'Stock up on the good things',
@@ -212,6 +219,7 @@ export const merchants: readonly Merchant[] = [
     service: 'shop',
     name: 'The Home Edit',
     category: 'Home',
+    location: kigaliPlaces.gikondo,
     tagline: 'Little upgrades for everyday living.',
     cover: 'home',
     collection: 'A little care for your home',
@@ -261,6 +269,7 @@ export function searchMerchants(
       [
         merchant.name,
         merchant.category,
+        merchant.location.label,
         merchant.tagline,
         merchant.description,
         ...merchant.products.flatMap((product) => [
