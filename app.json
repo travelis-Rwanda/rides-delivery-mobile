@@ -28,6 +28,14 @@
       "expo-font",
       "expo-splash-screen",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to choose a photo for your shop or product.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-location",
         {
           "locationWhenInUsePermission": "Allow $(PRODUCT_NAME) to fill in your pickup or delivery address using your current location.",

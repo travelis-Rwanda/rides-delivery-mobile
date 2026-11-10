@@ -19,6 +19,7 @@ export type IconName =
   | 'plus'
   | 'minus'
   | 'close'
+  | 'image'
   | 'edit'
   | 'search';
 // The existing outline icon system is shared by browsing and delivery screens.
@@ -44,6 +45,7 @@ const paths: Record<IconName, string> = {
   plus: 'M12 5v14M5 12h14',
   minus: 'M5 12h14',
   close: 'm6 6 12 12M6 18 18 6',
+  image: 'M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6M16 8h.01',
   edit: 'm14 5 5 5M4 20l5-1L21 7l-5-5L4 14Zm0 0 1-6',
 };
 

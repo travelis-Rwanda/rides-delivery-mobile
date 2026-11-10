@@ -30,16 +30,22 @@ const photos: Record<string, ImageSourcePropType> = {
 
 export function CatalogImage({
   imageKey,
+  imageUri,
   style,
   previewLabel,
 }: {
   imageKey?: string;
+  imageUri?: string;
   style?: StyleProp<ViewStyle>;
   previewLabel?: string;
 }) {
   const palette = usePalette();
   const [previewOpen, setPreviewOpen] = useState(false);
-  const source = imageKey ? photos[imageKey] : undefined;
+  const source = imageUri
+    ? { uri: imageUri }
+    : imageKey
+      ? photos[imageKey]
+      : undefined;
   const frameStyle: StyleProp<ViewStyle> = [
     {
       overflow: 'hidden',
