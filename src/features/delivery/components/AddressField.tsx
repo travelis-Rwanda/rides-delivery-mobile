@@ -14,7 +14,8 @@ import { ScrollPressable } from '../../../components/ui/ScrollInteraction';
 import { Text } from '../../../components/ui/Text';
 import { usePalette } from '../../../hooks/usePalette';
 import { AddressPicker } from '../../maps/components/AddressPicker';
-import type { Coordinate, Place } from '../../maps/places';
+import { kigali, type Coordinate, type Place } from '../../maps/places';
+import { findAddresses } from '../../maps/mapsApi';
 
 type AddressProps = ComponentProps<typeof Field> & {
   onChangeText: (value: string) => void;
@@ -55,9 +56,34 @@ export function AddressField({
   onSelectPlace,
   ...field
 }: AddressProps & { useDeviceLocation: boolean; autoFill: boolean }) {
-  const palette = usePalette();
-  const locatable = useDeviceLocation && Platform.OS !== 'web';
   const [pickerOpen, setPickerOpen] = useState(false);
+  const palette = usePalette();
+  const [searching, setSearching] = useState(false);
+  const [results, setResults] = useState<{ query: string; places?: Place[] }>();
+  const term = field.value?.trim() ?? '';
+  const latitude = point?.latitude ?? kigali.latitude;
+  const longitude = point?.longitude ?? kigali.longitude;
+  const canSearch =
+    searching && !pickerOpen && field.editable !== false && term.length >= 3;
+  useEffect(() => {
+    if (!canSearch) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      void findAddresses(term, { latitude, longitude }, controller.signal)
+        .then((places) => {
+          if (!controller.signal.aborted) setResults({ query: term, places });
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) setResults({ query: term });
+        });
+    }, 500);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [canSearch, term, latitude, longitude]);
+  const locatable = useDeviceLocation && Platform.OS !== 'web';
+
   const [status, setStatus] = useState<LookupStatus>(() =>
     locatable && autoFill && !field.value ? 'locating' : 'idle',
   );
@@ -138,42 +164,96 @@ export function AddressField({
         {...field}
         onChangeText={(value) => {
           cancelLookup();
+          setSearching(true);
+          setResults(undefined);
           onChangeText(value);
         }}
       />
-      <View className="mt-1 flex-row flex-wrap items-center gap-x-4">
-        <ScrollPressable
-          accessibilityRole="button"
-          accessibilityLabel={`Find ${field.label.toLowerCase()} on map`}
-          onPress={() => {
-            cancelLookup();
-            setPickerOpen(true);
-          }}
-          className="min-h-11 flex-row items-center gap-2"
-        >
-          <Icon name="search" size={16} color={palette.primary} />
-          <Text className="text-xs font-medium text-primary">Find on map</Text>
-        </ScrollPressable>
-        {locatable && (
+      {canSearch && (
+        <View className="mt-2 overflow-hidden rounded-xl border border-border bg-card">
+          {results?.query === term &&
+            results.places?.map((place) => (
+              <ScrollPressable
+                key={`${place.latitude},${place.longitude},${place.label}`}
+                accessibilityRole="button"
+                onPress={() => {
+                  setSearching(false);
+                  onSelectPlace(place);
+                }}
+                className="min-h-14 border-b border-border px-4 py-3"
+              >
+                <Text className="text-sm font-medium text-foreground">
+                  {place.label}
+                </Text>
+                {!!place.detail && (
+                  <Text className="mt-1 text-xs text-muted-foreground">
+                    {place.detail}
+                  </Text>
+                )}
+              </ScrollPressable>
+            ))}
+          <Text
+            accessibilityLiveRegion="polite"
+            className="px-4 py-2 text-xs text-muted-foreground"
+          >
+            {results?.query !== term
+              ? 'Searching addresses…'
+              : !results.places
+                ? 'Search unavailable. Enter an address or use the map.'
+                : !results.places.length
+                  ? 'No matches. Try a street or landmark.'
+                  : 'Select an address to set its map pin.'}
+          </Text>
           <ScrollPressable
             accessibilityRole="button"
-            accessibilityLabel={`Use current location for ${field.label.toLowerCase()}`}
-            accessibilityState={{ busy: locating, disabled: locating }}
-            disabled={locating}
-            onPress={() => setStatus('locating')}
+            onPress={() => setSearching(false)}
+            className="min-h-11 justify-center px-4"
+          >
+            <Text className="text-xs text-primary">Dismiss suggestions</Text>
+          </ScrollPressable>
+        </View>
+      )}
+      {field.editable !== false && (
+        <View className="mt-1 flex-row flex-wrap items-center gap-x-4">
+          <ScrollPressable
+            accessibilityRole="button"
+            accessibilityLabel={`Find ${field.label.toLowerCase()} on map`}
+            onPress={() => {
+              cancelLookup();
+              setSearching(false);
+              setPickerOpen(true);
+            }}
             className="min-h-11 flex-row items-center gap-2"
           >
-            {locating ? (
-              <ActivityIndicator size="small" color={palette.primary} />
-            ) : (
-              <Icon name="pin" size={16} color={palette.primary} />
-            )}
-            <Text className="shrink text-xs font-medium text-primary">
-              {locating ? 'Finding your address…' : 'Use current location'}
+            <Icon name="search" size={16} color={palette.primary} />
+            <Text className="text-xs font-medium text-primary">
+              Find on map
             </Text>
           </ScrollPressable>
-        )}
-      </View>
+          {locatable && (
+            <ScrollPressable
+              accessibilityRole="button"
+              accessibilityLabel={`Use current location for ${field.label.toLowerCase()}`}
+              accessibilityState={{ busy: locating, disabled: locating }}
+              disabled={locating}
+              onPress={() => {
+                setSearching(false);
+                setStatus('locating');
+              }}
+              className="min-h-11 flex-row items-center gap-2"
+            >
+              {locating ? (
+                <ActivityIndicator size="small" color={palette.primary} />
+              ) : (
+                <Icon name="pin" size={16} color={palette.primary} />
+              )}
+              <Text className="shrink text-xs font-medium text-primary">
+                {locating ? 'Finding your address…' : 'Use current location'}
+              </Text>
+            </ScrollPressable>
+          )}
+        </View>
+      )}
       {point && status === 'idle' && (
         <Text className="text-xs text-muted-foreground">Map pin set</Text>
       )}

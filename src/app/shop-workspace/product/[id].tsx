@@ -1,3 +1,4 @@
+import { ConfirmRemoveButton } from '../../../components/ui/ConfirmRemoveButton';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
@@ -246,11 +247,10 @@ function ProductForm({ product }: { product: ShopProduct }) {
                   )
                 }
               />
-              <Button
+              <ConfirmRemoveButton
                 label="Remove variation"
-                icon="minus"
-                secondary
-                onPress={() =>
+                description={`Remove ${variant.name.trim() || 'this variation'} from this draft? Save your changes to apply the removal.`}
+                onConfirm={() =>
                   setVariants((current) =>
                     current.filter((entry) => entry.id !== variant.id),
                   )

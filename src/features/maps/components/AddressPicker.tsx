@@ -247,7 +247,11 @@ export function AddressPicker({
         </Text>
         {pinName !== null && (
           <Field
-            label="Building, apartment or landmark (optional)"
+            label={
+              selected?.label === 'Pinned location'
+                ? 'Building or landmark (required)'
+                : 'Building, apartment or landmark (optional)'
+            }
             placeholder="Add a detail to help your driver"
             value={pinName}
             onChangeText={setPinName}
@@ -271,15 +275,32 @@ export function AddressPicker({
         <Button
           label="Use this address"
           icon="check"
-          disabled={!selected || resolving}
+          disabled={
+            !selected ||
+            resolving ||
+            (selected.label === 'Pinned location' && !pinName?.trim())
+          }
           onPress={() => {
-            if (!selected) return;
+            if (
+              !selected ||
+              (selected.label === 'Pinned location' && !pinName?.trim())
+            )
+              return;
             const customLabel = pinName?.trim();
             onSelect(
               customLabel
                 ? {
                     ...selected,
-                    detail: [selected.detail, customLabel]
+                    label:
+                      selected.label === 'Pinned location'
+                        ? customLabel
+                        : selected.label,
+                    detail: [
+                      selected.detail,
+                      selected.label === 'Pinned location'
+                        ? undefined
+                        : customLabel,
+                    ]
                       .filter(Boolean)
                       .join(', '),
                   }
