@@ -1,3 +1,4 @@
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   createContext,
@@ -11,6 +12,7 @@ import {
 
 import { openWithMockOffers } from './mockDrivers';
 import { isNegotiation, type Negotiation, type Result } from './negotiation';
+import type { Job } from './selection';
 
 const STORAGE_KEY = 'rides.delivery.negotiations.v1';
 
@@ -25,6 +27,7 @@ type NegotiationContextValue = {
     requestId: string,
     minimumFare: number,
     tripKey: string,
+    job?: Job,
   ) => Promise<Negotiation>;
   update: (
     requestId: string,
@@ -91,7 +94,12 @@ export function NegotiationProvider({ children }: PropsWithChildren) {
   }, []);
 
   const open = useCallback(
-    async (requestId: string, minimumFare: number, tripKey: string) => {
+    async (
+      requestId: string,
+      minimumFare: number,
+      tripKey: string,
+      job?: Job,
+    ) => {
       if (loading || loadError)
         throw new Error('Saved negotiations are unavailable. Try again.');
       const existing = current.current[requestId];
@@ -101,6 +109,7 @@ export function NegotiationProvider({ children }: PropsWithChildren) {
         minimumFare,
         new Date().toISOString(),
         tripKey,
+        job,
       );
       await commit({ ...current.current, [requestId]: created });
       return created;
@@ -129,7 +138,7 @@ export function NegotiationProvider({ children }: PropsWithChildren) {
     [commit, loadError, loading],
   );
 
-    // Forget a negotiation, e.g. when the trip changed and old offers are void.
+  // Forget a negotiation, e.g. when the trip changed and old offers are void.
   const discard = useCallback(
     async (requestId: string) => {
       if (loading || loadError)

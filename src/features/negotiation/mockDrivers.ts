@@ -1,4 +1,5 @@
 import { roundUp } from '../pricing/minimumFare';
+import { assignDriver } from './assignment';
 import {
   acceptOffer,
   offerId,
@@ -8,15 +9,36 @@ import {
   type Negotiation,
   type Result,
 } from './negotiation';
+import { kigaliPlaces } from '../maps/places';
+import { vehicleFits, type Driver, type Job } from './selection';
 
-// MOCK DATA. Replace this whole file with the Rides driver and offer APIs.
-// Driver names and vehicles stand in for existing Rides driver profiles.
-export type MockDriver = { id: string; name: string; vehicle: string };
+// MOCK DATA to be replaced with the Rides driver and offer APIs.
+// Driver names, vehicles and positions stand in for existing Rides driver
+// profiles and their live location.
+export type MockDriver = Driver;
 
 export const mockDrivers: readonly MockDriver[] = [
-  { id: 'driver-1', name: 'Eric N.', vehicle: 'Moto Bike' },
-  { id: 'driver-2', name: 'Aline U.', vehicle: 'Cab Taxi' },
-  { id: 'driver-3', name: 'Jean Paul M.', vehicle: 'Light Hilux' },
+  {
+    id: 'driver-1',
+    name: 'Eric N.',
+    vehicle: 'Moto Bike',
+    kind: 'moto',
+    location: kigaliPlaces.kimironko,
+  },
+  {
+    id: 'driver-2',
+    name: 'Aline U.',
+    vehicle: 'Cab Taxi',
+    kind: 'cab',
+    location: kigaliPlaces.kimihurura,
+  },
+  {
+    id: 'driver-3',
+    name: 'Jean Paul M.',
+    vehicle: 'Light Hilux',
+    kind: 'hilux',
+    location: kigaliPlaces.nyamirambo,
+  },
 ];
 
 export const getMockDriver = (id: string) =>
@@ -31,9 +53,12 @@ export function openWithMockOffers(
   minimumFare: number,
   now: string,
   tripKey?: string,
+  job?: Job,
 ): Negotiation {
   let n = startNegotiation(requestId, minimumFare, undefined, tripKey);
   mockDrivers.forEach((driver, index) => {
+    // Only drivers whose vehicle can carry the job make an offer.
+    if (job && !vehicleFits(driver.kind, job)) return;
     const amount = roundUp(minimumFare * OPENING_MARKUPS[index], ROUND_TO);
     const result = submitOffer(n, {
       id: offerId(n, driver.id),
@@ -44,7 +69,9 @@ export function openWithMockOffers(
     });
     if (result.ok) n = result.negotiation;
   });
-  return n;
+  // With a job, match the delivery to one driver. Without one, every driver
+  // stays open to the customer, as before.
+  return job ? assignDriver(n, job, mockDrivers) : n;
 }
 
 // How a mocked driver reacts to the customer's counter-offer: accept if it is

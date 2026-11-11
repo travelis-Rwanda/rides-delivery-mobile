@@ -31,6 +31,9 @@ export function tripKey(request: DeliveryRequest) {
     request.size,
     place(request.pickup, request.pickupPoint),
     place(request.destination, request.destinationPoint),
+    // Standard requests keep the same key as before, so offers already made
+    // for them are not thrown away.
+    ...(request.urgent ? ['urgent'] : []),
   ].join('|');
 }
 

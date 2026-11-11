@@ -104,8 +104,7 @@ export default function HelpScreen() {
           Partner workspaces
         </Text>
         <Text className="mb-4 text-sm leading-6 text-muted-foreground">
-          Merchant-side previews for restaurants and shops on the Rides
-          platform.
+          Merchant-side previews for restaurants and shops, and a driver preview for agreeing fares, on the Rides platform.
         </Text>
         <View className="mb-6 overflow-hidden rounded-[20px] bg-card">
           {[
@@ -120,6 +119,12 @@ export default function HelpScreen() {
               title: 'Shop workspace',
               description: 'Manage your products, stock, orders, and payouts.',
               href: '/shop-workspace' as const,
+            },
+            {
+              icon: 'cargo' as const,
+              title: 'Driver workspace',
+              description: 'See your delivery jobs and agree fares with customers.',
+              href: '/driver-workspace' as const,
             },
           ].map((entry, index) => (
             <View
