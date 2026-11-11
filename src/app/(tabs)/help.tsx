@@ -10,8 +10,8 @@ import {
   Page,
   PageScroll,
 } from '../../components/ui/primitives';
-import { usePalette } from '../../hooks/usePalette';
 import { ScrollPressable } from '../../components/ui/ScrollInteraction';
+import { usePalette } from '../../hooks/usePalette';
 
 const questions = [
   {
@@ -97,28 +97,65 @@ export default function HelpScreen() {
             </View>
           ))}
         </View>
+        <Text
+          accessibilityRole="header"
+          className="mb-4 mt-2 text-lg font-bold text-foreground"
+        >
+          Partner workspaces
+        </Text>
+        <Text className="mb-4 text-sm leading-6 text-muted-foreground">
+          Merchant-side previews for restaurants and shops on the Rides
+          platform.
+        </Text>
+        <View className="mb-6 overflow-hidden rounded-[20px] bg-card">
+          {[
+            {
+              icon: 'food' as const,
+              title: 'Restaurant workspace',
+              description: 'Manage your menu, orders, and payouts.',
+              href: '/restaurant-workspace' as const,
+            },
+            {
+              icon: 'shop' as const,
+              title: 'Shop workspace',
+              description: 'Manage your products, stock, orders, and payouts.',
+              href: '/shop-workspace' as const,
+            },
+          ].map((entry, index) => (
+            <View
+              key={entry.href}
+              className={index > 0 ? 'border-t border-border' : ''}
+            >
+              <ScrollPressable
+                accessibilityRole="button"
+                accessibilityLabel={entry.title}
+                onPress={() => router.push(entry.href)}
+                className="min-h-16 flex-row items-center gap-4 px-4 py-3"
+              >
+                <View className="h-11 w-11 items-center justify-center rounded-[14px] bg-secondary">
+                  <Icon name={entry.icon} color={palette.primary} size={21} />
+                </View>
+                <View className="flex-1 gap-1">
+                  <Text className="text-sm font-medium text-foreground">
+                    {entry.title}
+                  </Text>
+                  <Text className="text-xs leading-[18px] text-muted-foreground">
+                    {entry.description}
+                  </Text>
+                </View>
+                <Icon
+                  name="chevron"
+                  color={palette['muted-foreground']}
+                  size={17}
+                />
+              </ScrollPressable>
+            </View>
+          ))}
+        </View>
         <Notice>
           You’re always in control. Review the delivery details and the final
           charges before confirming a real booking.
         </Notice>
-        <ScrollPressable
-          accessibilityRole="button"
-          onPress={() => router.push('/shop-workspace')}
-          className="mt-4 min-h-16 flex-row items-center gap-3 rounded-[18px] border border-border bg-card p-4"
-        >
-          <View className="h-10 w-10 items-center justify-center rounded-xl bg-secondary">
-            <Icon name="shop" color={palette.primary} size={20} />
-          </View>
-          <View className="flex-1 gap-1">
-            <Text className="text-sm font-medium text-foreground">
-              Shop workspace
-            </Text>
-            <Text className="text-xs text-muted-foreground">
-              Merchant preview
-            </Text>
-          </View>
-          <Icon name="chevron" color={palette['muted-foreground']} size={17} />
-        </ScrollPressable>
       </PageScroll>
     </Page>
   );

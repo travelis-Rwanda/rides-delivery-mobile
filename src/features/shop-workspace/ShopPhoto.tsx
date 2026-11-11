@@ -1,3 +1,4 @@
+import { ConfirmRemoveButton } from '../../components/ui/ConfirmRemoveButton';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, View, type StyleProp, type ViewStyle } from 'react-native';
@@ -194,12 +195,11 @@ export function ShopPhotoEditor({
               disabled={disabled}
               onPress={() => void draft.choose()}
             />
-            <Button
+            <ConfirmRemoveButton
               label="Remove photo"
-              secondary
-              icon={null}
               disabled={disabled}
-              onPress={draft.remove}
+              description="Remove this photo from the draft? Save your changes to apply the removal."
+              onConfirm={draft.remove}
             />
           </View>
         </>

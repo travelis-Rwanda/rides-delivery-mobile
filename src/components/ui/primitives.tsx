@@ -111,7 +111,7 @@ export function Button({
       accessibilityState={{ disabled: disabled || loading, busy: loading }}
       disabled={disabled || loading}
       onPress={onPress}
-      className={`min-h-14 flex-row items-center justify-center gap-3 rounded-[16px] px-5 py-4 active:opacity-70 ${secondary ? 'border border-border bg-card' : 'bg-primary'} ${disabled || loading ? 'opacity-50' : ''}`}
+      className={`min-h-14 flex-row items-center justify-center gap-3 rounded-[16px] px-5 py-4 active:opacity-70 ${secondary ? 'border border-muted-foreground/40 bg-card' : 'bg-primary'} ${disabled || loading ? 'opacity-50' : ''}`}
     >
       {loading ? (
         <ActivityIndicator
@@ -120,7 +120,7 @@ export function Button({
       ) : (
         <>
           <Text
-            className={`text-[14px] font-medium ${secondary ? 'text-foreground' : 'text-primary-foreground'}`}
+            className={`shrink text-center text-[14px] font-medium ${secondary ? 'text-foreground' : 'text-primary-foreground'}`}
           >
             {label}
           </Text>
