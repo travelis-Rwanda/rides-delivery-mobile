@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Text } from '../../components/ui/Text';
@@ -10,6 +11,7 @@ import {
   PageScroll,
 } from '../../components/ui/primitives';
 import { usePalette } from '../../hooks/usePalette';
+import { ScrollPressable } from '../../components/ui/ScrollInteraction';
 
 const questions = [
   {
@@ -99,6 +101,24 @@ export default function HelpScreen() {
           You’re always in control. Review the delivery details and the final
           charges before confirming a real booking.
         </Notice>
+        <ScrollPressable
+          accessibilityRole="button"
+          onPress={() => router.push('/shop-workspace')}
+          className="mt-4 min-h-16 flex-row items-center gap-3 rounded-[18px] border border-border bg-card p-4"
+        >
+          <View className="h-10 w-10 items-center justify-center rounded-xl bg-secondary">
+            <Icon name="shop" color={palette.primary} size={20} />
+          </View>
+          <View className="flex-1 gap-1">
+            <Text className="text-sm font-medium text-foreground">
+              Shop workspace
+            </Text>
+            <Text className="text-xs text-muted-foreground">
+              Merchant preview
+            </Text>
+          </View>
+          <Icon name="chevron" color={palette['muted-foreground']} size={17} />
+        </ScrollPressable>
       </PageScroll>
     </Page>
   );

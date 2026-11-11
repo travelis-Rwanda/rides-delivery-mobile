@@ -142,15 +142,27 @@ export function Button({
 export function Field({
   label,
   error,
+  outlined = false,
   onFocus,
   onBlur,
   style,
   ...props
-}: TextInputProps & { label: string; error?: string }) {
+}: TextInputProps & { label: string; error?: string; outlined?: boolean }) {
   const palette = usePalette();
   const [focused, setFocused] = useState(false);
   const input = useRef<TextInputInstance>(null);
   const keyboard = useContext(KeyboardInputContext);
+  const border = error
+    ? 'border-destructive'
+    : focused
+      ? 'border-primary'
+      : outlined
+        ? 'border-muted-foreground/75'
+        : 'border-input';
+  const surface = outlined
+    ? 'rounded-[12px] bg-background/55 web:outline-none'
+    : 'rounded-[16px] bg-card';
+  const height = outlined && props.multiline ? 'min-h-24' : 'min-h-14';
   return (
     <View className="gap-2">
       <Text className="text-[12px] font-medium text-foreground">{label}</Text>
@@ -158,9 +170,14 @@ export function Field({
         ref={input}
         accessibilityLabel={label}
         placeholderTextColor={palette['muted-foreground']}
-        className={`min-h-14 rounded-[16px] border bg-card px-4 py-[18px] text-[14px] text-foreground ${error ? 'border-destructive' : focused ? 'border-primary' : 'border-input'}`}
+        className={`border px-4 py-[18px] text-[14px] text-foreground ${height} ${surface} ${border}`}
+        underlineColorAndroid={outlined ? 'transparent' : undefined}
         {...props}
-        style={[{ fontFamily: 'Stolzl' }, style]}
+        style={[
+          { fontFamily: 'Stolzl' },
+          outlined && props.multiline && { textAlignVertical: 'top' },
+          style,
+        ]}
         onFocus={(event) => {
           setFocused(true);
           keyboard?.focus(input.current);
