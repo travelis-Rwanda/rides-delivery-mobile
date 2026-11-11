@@ -28,6 +28,8 @@ export type DeliveryRequest = {
   description: string;
   method: 'pickup' | 'collection';
   size: 'Small' | 'Medium' | 'Large';
+  // Urgent deliveries go to the nearest driver instead of the cheapest.
+  urgent?: boolean;
   notes: string;
   quantities: Record<string, number>;
   createdAt: string;
@@ -141,6 +143,7 @@ export function isDeliveryRequest(value: unknown): value is DeliveryRequest {
     Number.isFinite(Date.parse(r.createdAt as string)) &&
     (r.method === 'pickup' || r.method === 'collection') &&
     ['Small', 'Medium', 'Large'].includes(r.size as string) &&
+    (r.urgent === undefined || typeof r.urgent === 'boolean') &&
     typeof r.previewConfirmed === 'boolean' &&
     !!r.quantities &&
     typeof r.quantities === 'object' &&

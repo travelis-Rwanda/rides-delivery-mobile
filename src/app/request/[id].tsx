@@ -111,10 +111,10 @@ export default function ReviewScreen() {
       const next = { ...request, pickupPoint, roadRoute };
 
       // A newly calculated route can change the minimum and void the fare.
-      // Save it, and the screen then asks for new driver offers.
+      // Save it, and the screen then asks for new driver.
       if (requestPricing(next, negotiations[request.id]).kind === 'awaiting') {
         await save(next);
-        setError('Your route changed the minimum fare. Get new driver offers.');
+        setError('Your route changed the minimum fare. Find a new driver.');
         return;
       }
 
@@ -370,7 +370,7 @@ export default function ReviewScreen() {
           {pricing.kind === 'awaiting' ? (
             <Text className="text-sm leading-6 text-muted-foreground">
               {pricing.stale
-                ? 'Your trip changed after the fare was agreed. Get new driver offers to continue.'
+                ? 'Your trip changed after the fare was agreed. Find a new driver to continue.'
                 : 'Agree a fare with a driver to see your full cost breakdown.'}
             </Text>
           ) : (
@@ -421,7 +421,7 @@ export default function ReviewScreen() {
       <Footer>
         {pricing.kind === 'awaiting' ? (
           <Button
-            label={pricing.stale ? 'Get new driver offers' : 'Get driver offers'}
+            label={pricing.stale ? 'Find a new driver' : 'Find my driver'}
             loading={saving}
             onPress={() => void findDrivers()}
           />

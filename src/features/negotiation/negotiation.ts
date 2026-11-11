@@ -10,12 +10,22 @@ export type Offer = {
   status: OfferStatus;
 };
 
+// Which driver the customer is negotiating with, and who comes next.
+export type Assignment = {
+  order: string[]; // every eligible driver, best first
+  basis: 'nearest' | 'cheapest';
+  fellBack: boolean; // urgent, but the pickup was not pinned
+  current?: string; // undefined once every driver has been tried
+  tried: string[]; // drivers who did not reach a deal, in order
+};
+
 export type Negotiation = {
   requestId: string;
   minimumFare: number;
   maxRoundsPerDriver: number;
   status: 'open' | 'locked';
   tripKey?: string; // identifies the trip these offers were made for
+  assignment?: Assignment;
   offers: Offer[];
   lockedFare?: number;
   lockedOfferId?: string;
@@ -58,6 +68,8 @@ export function submitOffer(
     return fail('Enter a whole amount in RWF.');
   if (input.amount < n.minimumFare)
     return fail(`The fare cannot be below the minimum of RWF ${n.minimumFare}.`);
+  if (n.assignment && n.assignment.current !== input.driverId)
+    return fail('This driver is not assigned to your delivery.');
 
   const thread = threadOf(n, input.driverId);
   const last = thread[thread.length - 1];
@@ -89,6 +101,8 @@ function findPending(n: Negotiation, offerId: string, responder: Party) {
   if (n.status === 'locked') return fail('The fare is already locked.');
   const offer = n.offers.find((entry) => entry.id === offerId);
   if (!offer) return fail('This offer does not exist.');
+  if (n.assignment && offer.driverId !== n.assignment.current)
+    return fail('This driver is not assigned to your delivery.');
   if (offer.status !== 'pending') return fail('This offer is no longer open.');
   if (offer.by === responder)
     return fail('You cannot respond to your own offer.');
@@ -141,23 +155,47 @@ const isOffer = (v: unknown): v is Offer => {
   );
 };
 
+const isAssignment = (v: unknown): v is Assignment => {
+  if (!v || typeof v !== 'object') return false;
+  const a = v as Record<string, unknown>;
+  const ids = (x: unknown): x is string[] =>
+    Array.isArray(x) && x.every((id) => typeof id === 'string' && !!id);
+  return (
+    ids(a.order) &&
+    ids(a.tried) &&
+    (a.basis === 'nearest' || a.basis === 'cheapest') &&
+    typeof a.fellBack === 'boolean' &&
+    (a.current === undefined ||
+      (typeof a.current === 'string' &&
+        a.order.includes(a.current) &&
+        !a.tried.includes(a.current)))
+  );
+};
+
 // Used when reading saved data back, like isDeliveryRequest does for requests.
 export function isNegotiation(value: unknown): value is Negotiation {
   if (!value || typeof value !== 'object') return false;
   const n = value as Record<string, unknown>;
   const locked = n.status === 'locked';
+  const assignment = n.assignment as Assignment | undefined;
   return (
     typeof n.requestId === 'string' && !!n.requestId &&
     typeof n.minimumFare === 'number' && Number.isSafeInteger(n.minimumFare) && n.minimumFare > 0 &&
     typeof n.maxRoundsPerDriver === 'number' && Number.isSafeInteger(n.maxRoundsPerDriver) && n.maxRoundsPerDriver > 0 &&
     (n.tripKey === undefined || typeof n.tripKey === 'string') &&
+    (n.assignment === undefined || isAssignment(n.assignment)) &&
     (n.status === 'open' || locked) &&
     Array.isArray(n.offers) && n.offers.every(isOffer) &&
     (locked
       ? typeof n.lockedFare === 'number' &&
         typeof n.lockedOfferId === 'string' &&
         (n.offers as Offer[]).some(
-          (o) => o.id === n.lockedOfferId && o.status === 'accepted' && o.amount === n.lockedFare,
+          (o) =>
+            o.id === n.lockedOfferId &&
+            o.status === 'accepted' &&
+            o.amount === n.lockedFare &&
+            // The deal must be with the driver the customer was matched to.
+          (assignment === undefined || o.driverId === assignment.current),
         )
       : n.lockedFare === undefined && n.lockedOfferId === undefined)
   );

@@ -602,6 +602,45 @@ function ServiceForm({
                   : 'Size helps plan your request. Final transport fare requires an approved driver offer.'}
               </Text>
             </View>
+            {(service.id === 'parcel' || service.id === 'cargo') && (
+              <View>
+                <Text className="mb-3 text-sm font-medium text-foreground">
+                  How urgent is it?
+                </Text>
+                <View className="flex-row gap-2">
+                  {(
+                    [
+                      { value: false, label: 'Standard' },
+                      { value: true, label: 'Urgent' },
+                    ] as const
+                  ).map((option) => {
+                    const selected = !!form.urgent === option.value;
+                    return (
+                      <Pressable
+                        key={option.label}
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: selected }}
+                        onPress={() =>
+                          update('urgent', option.value ? true : undefined)
+                        }
+                        className={`min-h-12 flex-1 items-center justify-center rounded-xl border px-2 py-3 ${selected ? 'border-primary bg-secondary' : 'border-border bg-card'}`}
+                      >
+                        <Text
+                          className={`text-sm font-medium ${selected ? 'text-primary' : 'text-muted-foreground'}`}
+                        >
+                          {option.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <Text className="mt-2 text-xs leading-5 text-muted-foreground">
+                  {form.urgent
+                    ? 'Urgent deliveries go to the driver nearest your pickup.'
+                    : 'Standard deliveries go to the driver with the lowest price.'}
+                </Text>
+              </View>
+            )}
             {service.id === 'parcel' && (
               <View>
                 <Text className="mb-3 text-sm font-medium text-foreground">
