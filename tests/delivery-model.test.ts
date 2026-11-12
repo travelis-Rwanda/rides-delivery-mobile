@@ -21,6 +21,8 @@ function request(overrides: Partial<DeliveryRequest> = {}): DeliveryRequest {
     description: 'Documents',
     method: 'pickup',
     size: 'Small',
+    pickupContact: { name: 'Eric Test', phone: '+250788123456' },
+    receiverContact: { name: 'Aline Test', phone: '+250728123456' },
     notes: '',
     quantities: {},
     createdAt: '2026-11-07T10:00:00.000Z',

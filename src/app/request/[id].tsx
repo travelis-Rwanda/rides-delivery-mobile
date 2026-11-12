@@ -17,6 +17,7 @@ import {
 } from '../../components/ui/primitives';
 import { useDelivery } from '../../features/delivery/DeliveryProvider';
 import { selectedItems } from '../../features/delivery/model';
+import { contactLine } from '../../features/delivery/contact';
 import { useNegotiation } from '../../features/negotiation/NegotiationProvider';
 import { requestPricing } from '../../features/pricing/forRequest';
 import {
@@ -242,6 +243,11 @@ export default function ReviewScreen() {
                     {merchant.location.label}
                   </Text>
                 )}
+                {request.pickupContact && (
+                  <Text className="mt-1 text-xs text-muted-foreground">
+                    {contactLine(request.pickupContact)}
+                  </Text>
+                )}
               </View>
             </View>
 
@@ -256,6 +262,11 @@ export default function ReviewScreen() {
                 <Text className="text-sm font-medium leading-5 text-foreground">
                   {request.destination}
                 </Text>
+                {request.receiverContact && (
+                  <Text className="mt-1 text-xs text-muted-foreground">
+                    {contactLine(request.receiverContact)}
+                  </Text>
+                )}
               </View>
             </View>
 

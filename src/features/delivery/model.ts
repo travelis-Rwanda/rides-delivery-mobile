@@ -1,3 +1,4 @@
+import { contactErrors, isContact, type Contact } from './contact';
 import {
   getService,
   previewCatalog,
@@ -30,6 +31,12 @@ export type DeliveryRequest = {
   size: 'Small' | 'Medium' | 'Large';
   // Urgent deliveries go to the nearest driver instead of the cheapest.
   urgent?: boolean;
+  // The customer wants the item packaged, for an extra fee (parcel and cargo).
+  packaging?: boolean;
+  // Who the driver meets at each end, so they can reach them. Parcel and
+  // cargo only.
+  pickupContact?: Contact;
+  receiverContact?: Contact;
   notes: string;
   quantities: Record<string, number>;
   createdAt: string;
@@ -99,6 +106,14 @@ export function validateRequest(
       request.parcelDirection === 'receive'
         ? 'Tell us what the sender is handing over.'
         : 'Tell us what you would like to send.';
+  // Drivers on parcel and cargo jobs need someone to call at both ends.
+  if (!merchantOrder) {
+    Object.assign(errors, contactErrors('pickupContact', request.pickupContact));
+    Object.assign(
+      errors,
+      contactErrors('receiverContact', request.receiverContact),
+    );
+  }
   if (merchantOrder) {
     const items = selectedItems(request);
     if (items.some((item) => item.quantity > stockLimit(item)))
@@ -144,6 +159,9 @@ export function isDeliveryRequest(value: unknown): value is DeliveryRequest {
     (r.method === 'pickup' || r.method === 'collection') &&
     ['Small', 'Medium', 'Large'].includes(r.size as string) &&
     (r.urgent === undefined || typeof r.urgent === 'boolean') &&
+    (r.packaging === undefined || typeof r.packaging === 'boolean') &&
+    (r.pickupContact === undefined || isContact(r.pickupContact)) &&
+    (r.receiverContact === undefined || isContact(r.receiverContact)) &&
     typeof r.previewConfirmed === 'boolean' &&
     !!r.quantities &&
     typeof r.quantities === 'object' &&

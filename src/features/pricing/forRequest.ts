@@ -1,23 +1,36 @@
 import { previewEstimate, type DeliveryRequest } from '../delivery/model';
 import type { Negotiation } from '../negotiation/negotiation';
-import { buildBreakdown, type Breakdown } from './breakdown';
-import { isFareService } from './config';
-import { minimumFare, type MinimumFare } from './minimumFare';
+import {
+  breakdownForTotal,
+  buildBreakdown,
+  totalForDriverFare,
+  type Breakdown,
+} from './breakdown';
+import { isFareService, pricingConfig } from './config';
+import { addPackaging } from './packaging';
+import { minimumFare, roundUp, type MinimumFare } from './minimumFare';
 import { coordinateKey, type Coordinate } from '../maps/places';
 
-// The minimum fare for a saved request, or null when the service is not
-// negotiated (restaurant and shop delivery use a fixed fare for now).
+// The lowest total a saved request can be negotiated at, or null when the
+// service is not negotiated (restaurant and shop delivery use a fixed fare for
+// now). Customer and driver agree one total that already includes the service
+// fee and tax, so the floor is the total for the lowest allowed driver fare,
+// rounded up to a clean figure.
 export function minimumFareForRequest(
   request: DeliveryRequest,
 ): MinimumFare | null {
   if (!isFareService(request.service)) return null;
-  return minimumFare({
+  const fare = minimumFare({
     service: request.service,
     size: request.size,
     roadRoute: request.roadRoute,
     pickupPoint: request.pickupPoint,
     destinationPoint: request.destinationPoint,
   });
+  return {
+    ...fare,
+    amount: roundUp(totalForDriverFare(fare.amount), pricingConfig.roundTo),
+  };
 }
 
 // Identifies the trip a fare was agreed for. If any part changes, the old
@@ -40,7 +53,16 @@ export function tripKey(request: DeliveryRequest) {
 export type RequestPricing =
   | { kind: 'sample'; breakdown: Breakdown } // restaurant and shop: fixed sample fare
   | { kind: 'awaiting'; stale: boolean } // parcel and cargo: no valid agreed fare
-  | { kind: 'agreed'; breakdown: Breakdown; driverFare: number };
+  // `negotiated` is the price agreed with the driver, fees and tax included.
+  // `total` is everything the customer pays: that plus packaging, if chosen.
+  // `driverFare` is the driver's share of the negotiated price.
+  | {
+      kind: 'agreed';
+      breakdown: Breakdown;
+      negotiated: number;
+      total: number;
+      driverFare: number;
+    };
 
 export function requestPricing(
   request: DeliveryRequest,
@@ -67,9 +89,20 @@ export function requestPricing(
   return { kind: 'awaiting', stale: true };
   if (negotiation.status !== 'locked' || negotiation.lockedFare === undefined)
     return { kind: 'awaiting', stale: false };
+  // The agreed amount is the total. Split it back into the driver's fare, the
+  // service fee and the tax. A total too small to cover the fees is not valid.
+  const split = breakdownForTotal(negotiation.lockedFare);
+  if (!split) return { kind: 'awaiting', stale: true };
+  // Packaging is a separate fee outside the negotiated price.
+  const breakdown = request.packaging
+    ? addPackaging(split, request.size)
+    : split;
   return {
     kind: 'agreed',
-    driverFare: negotiation.lockedFare,
-    breakdown: buildBreakdown({ driverFare: negotiation.lockedFare }),
+    negotiated: negotiation.lockedFare,
+    total: breakdown.total,
+    driverFare:
+      split.lines.find((line) => line.key === 'driverFare')?.amount ?? 0,
+    breakdown,
   };
 }

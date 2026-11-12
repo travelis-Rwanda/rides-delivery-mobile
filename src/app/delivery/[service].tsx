@@ -17,6 +17,12 @@ import {
 } from '../../components/ui/primitives';
 import { useDelivery } from '../../features/delivery/DeliveryProvider';
 import { AddressField } from '../../features/delivery/components/AddressField';
+import { ContactFields } from '../../features/delivery/components/ContactFields';
+import {
+  cleanContact,
+  type Contact,
+  type ContactKey,
+} from '../../features/delivery/contact';
 import {
   selectedItems,
   validateRequest,
@@ -45,6 +51,11 @@ import {
   type Coordinate,
   type Place,
 } from '../../features/maps/places';
+import {
+  suggestedVehicle,
+  vehicleLabels,
+} from '../../features/negotiation/selection';
+import { packagingFee } from '../../features/pricing/packaging';
 
 export default function ServiceRoute() {
   const {
@@ -240,6 +251,27 @@ function ServiceForm({
     setErrors((current) => ({ ...current, [key]: '' }));
   }
 
+  // Keeps what was typed as is while editing. It is tidied up when saved.
+  function updateContact(
+    key: ContactKey,
+    field: keyof Contact,
+    text: string,
+  ) {
+    setForm((current) => ({
+      ...current,
+      [key]: {
+        name: current[key]?.name ?? '',
+        phone: current[key]?.phone ?? '',
+        [field]: text,
+      },
+      previewConfirmed: false,
+    }));
+    setErrors((current) => ({
+      ...current,
+      [`${key}${field === 'name' ? 'Name' : 'Phone'}`]: '',
+    }));
+  }
+
   function changePickupMethod(method: DeliveryRequest['method']) {
     if (method === form.method) return;
     setAlternatePickup({ label: form.pickup, point: form.pickupPoint });
@@ -289,6 +321,9 @@ function ServiceForm({
         pickup: form.pickup.trim(),
         destination: form.destination.trim(),
         description: form.description.trim(),
+        pickupContact: form.pickupContact && cleanContact(form.pickupContact),
+        receiverContact:
+          form.receiverContact && cleanContact(form.receiverContact),
       });
       router.push({ pathname: '/request/[id]', params: { id: form.id } });
     } catch {
@@ -641,6 +676,59 @@ function ServiceForm({
                 </Text>
               </View>
             )}
+            {(service.id === 'parcel' || service.id === 'cargo') && (
+              <View className="gap-4">
+                <View className="rounded-xl border border-border bg-card p-4">
+                  <Text className="text-xs font-medium tracking-wider text-muted-foreground">
+                    SUGGESTED VEHICLE
+                  </Text>
+                  <Text className="mt-1 text-base font-bold text-foreground">
+                    {vehicleLabels[suggestedVehicle(form)]}
+                  </Text>
+                  <Text className="mt-1 text-xs leading-5 text-muted-foreground">
+                    Based on the {form.size.toLowerCase()} size. We only match
+                    you with drivers whose vehicle can carry it.
+                  </Text>
+                </View>
+                <View>
+                  <Text className="mb-3 text-sm font-medium text-foreground">
+                    Does your item need packaging?
+                  </Text>
+                  <View className="flex-row gap-2">
+                    {(
+                      [
+                        { value: false, label: 'No' },
+                        { value: true, label: 'Yes' },
+                      ] as const
+                    ).map((option) => {
+                      const selected = !!form.packaging === option.value;
+                      return (
+                        <Pressable
+                          key={option.label}
+                          accessibilityRole="radio"
+                          accessibilityState={{ checked: selected }}
+                          onPress={() =>
+                            update('packaging', option.value ? true : undefined)
+                          }
+                          className={`min-h-12 flex-1 items-center justify-center rounded-xl border px-2 py-3 ${selected ? 'border-primary bg-secondary' : 'border-border bg-card'}`}
+                        >
+                          <Text
+                            className={`text-sm font-medium ${selected ? 'text-primary' : 'text-muted-foreground'}`}
+                          >
+                            {option.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  <Text className="mt-2 text-xs leading-5 text-muted-foreground">
+                    {form.packaging
+                      ? `Packaging adds ${formatMoney(packagingFee(form.size))} plus tax. It shows as its own line on your review.`
+                      : 'Leave this off if your item is already packed.'}
+                  </Text>
+                </View>
+              </View>
+            )}
             {service.id === 'parcel' && (
               <View>
                 <Text className="mb-3 text-sm font-medium text-foreground">
@@ -760,6 +848,38 @@ function ServiceForm({
             <Text className="text-xs leading-5 text-muted-foreground">
               Set both stops on the map to see road distance and drive time.
             </Text>
+          )}
+          {!merchantOrder && (
+            <View className="gap-6">
+              <ContactFields
+                title="Who will the driver meet at the pickup?"
+                hint={
+                  receiving
+                    ? 'The sender, who hands the item to the driver.'
+                    : 'Usually you, or whoever hands the item over.'
+                }
+                contact={form.pickupContact}
+                nameError={errors.pickupContactName}
+                phoneError={errors.pickupContactPhone}
+                onChange={(field, text) =>
+                  updateContact('pickupContact', field, text)
+                }
+              />
+              <ContactFields
+                title="Who will receive it?"
+                hint={
+                  receiving
+                    ? 'Usually you.'
+                    : 'The person at the delivery address.'
+                }
+                contact={form.receiverContact}
+                nameError={errors.receiverContactName}
+                phoneError={errors.receiverContactPhone}
+                onChange={(field, text) =>
+                  updateContact('receiverContact', field, text)
+                }
+              />
+            </View>
           )}
           <Field
             label="Delivery notes (optional)"

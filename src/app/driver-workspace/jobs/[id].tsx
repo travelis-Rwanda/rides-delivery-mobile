@@ -15,8 +15,11 @@ import {
 import { useDelivery } from '../../../features/delivery/DeliveryProvider';
 import { formatMoney } from '../../../features/delivery/services';
 import { useDriverSession } from '../../../features/driver-workspace/DriverSessionProvider';
-import { jobStatus } from '../../../features/driver-workspace/jobs';
-import { JobTag } from '../../../features/driver-workspace/ui';
+import {
+  contactsVisible,
+  jobStatus,
+} from '../../../features/driver-workspace/jobs';
+import { JobDetails, JobTag } from '../../../features/driver-workspace/ui';
 import { declineAndAdvance } from '../../../features/negotiation/assignment';
 import { OfferBubble } from '../../../features/negotiation/components/OfferBubble';
 import { getMockDriver } from '../../../features/negotiation/mockDrivers';
@@ -31,6 +34,7 @@ import {
 import { useNegotiation } from '../../../features/negotiation/NegotiationProvider';
 import { straightLineKm } from '../../../features/pricing/minimumFare';
 import { usePalette } from '../../../hooks/usePalette';
+import { driverFareForTotal } from '../../../features/pricing/breakdown';
 
 export default function DriverJobScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -165,10 +169,18 @@ export default function DriverJobScreen() {
             {km !== null ? ` · ${km.toFixed(1)} km from you to pickup` : ''}
           </Text>
           <Text className="text-xs leading-5 text-muted-foreground">
-            No price can go below {formatMoney(negotiation.minimumFare)}.
+            No price can go below {formatMoney(negotiation.minimumFare)}. Prices
+            include the service fee and tax.
           </Text>
+          {last && driverFareForTotal(last.amount) !== null && (
+            <Text className="text-xs font-medium leading-5 text-foreground">
+              On the latest price you earn{' '}
+              {formatMoney(driverFareForTotal(last.amount)!)} after fees and
+              tax.
+            </Text>
+          )}
         </View>
-
+        <JobDetails request={request} contactsVisible={contactsVisible(status)} />
         {status === 'agreed' && (
           <View className="mb-4 rounded-[20px] bg-success-muted p-5">
             <Text className="text-xs font-medium tracking-wider text-muted-foreground">
