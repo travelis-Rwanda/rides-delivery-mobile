@@ -96,14 +96,17 @@ test('drivers whose vehicle cannot carry the job are never chosen', () => {
   });
   assert.ok(!ids(large).includes('driver-1'));
 
+  // A medium parcel suggests a cab, so a motorbike can no longer take it.
   assert.equal(
     vehicleFits('moto', { service: 'parcel', size: 'Medium' }),
-    true,
+    false,
   );
+  assert.equal(vehicleFits('cab', { service: 'parcel', size: 'Medium' }), true);
   assert.equal(
     vehicleFits('moto', { service: 'parcel', size: 'Large' }),
     false,
   );
+  assert.equal(vehicleFits('cab', { service: 'parcel', size: 'Large' }), false);
   assert.equal(vehicleFits('cab', { service: 'cargo', size: 'Small' }), false);
 });
 

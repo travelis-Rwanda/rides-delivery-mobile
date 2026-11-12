@@ -268,7 +268,8 @@ export default function NegotiateScreen() {
         </Text>
         <Text className="mb-6 mt-3 text-sm leading-6 text-muted-foreground">
           You and your driver trade prices only. No price can go below{' '}
-          {formatMoney(negotiation.minimumFare)}.
+          {formatMoney(negotiation.minimumFare)}. Every price includes the
+          service fee and tax.
         </Text>
 
         {minimum.distanceSource !== 'road' && !locked && (

@@ -15,16 +15,34 @@ export type Driver = {
   location: Coordinate; // last known position
 };
 
-// PLACEHOLDER RULES. Which vehicle can carry which job is decided by
-// operations; until then, cargo needs a pickup truck and large parcels need
-// more than a motorbike.
+export const vehicleLabels: Record<VehicleKind, string> = {
+  moto: 'Moto Bike',
+  cab: 'Cab Taxi',
+  hilux: 'Light Hilux',
+};
+
+// How much each vehicle can carry, smallest first.
+const capacity: Record<VehicleKind, number> = { moto: 1, cab: 2, hilux: 3 };
+
+// PLACEHOLDER RULES. The vehicle suggested for a job depends on its size, and
+// operations will confirm the real limits. Cargo always needs a pickup truck.
+export function suggestedVehicle(job: {
+  service: ServiceId;
+  size: Size;
+}): VehicleKind {
+  if (job.service === 'cargo') return 'hilux';
+  if (job.size === 'Large') return 'hilux';
+  return job.size === 'Medium' ? 'cab' : 'moto';
+}
+
+// A driver can take the job when their vehicle can carry at least as much as
+// the suggested one, so a cab can take a small parcel but a motorbike cannot
+// take a medium one.
 export function vehicleFits(
   kind: VehicleKind,
   job: { service: ServiceId; size: Size },
 ): boolean {
-  if (job.service === 'cargo') return kind === 'hilux';
-  if (job.size === 'Large') return kind !== 'moto';
-  return true;
+  return capacity[kind] >= capacity[suggestedVehicle(job)];
 }
 
 export type RankedDriver = {

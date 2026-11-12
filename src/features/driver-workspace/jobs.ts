@@ -35,6 +35,14 @@ export function jobStatus(
   return assignment.tried.includes(driverId) ? 'passed' : undefined;
 }
 
+// Who may see the customer's contact details. The driver in play and the
+// driver with the agreed fare can; a driver who passed cannot. Keeping the rule
+// in one place makes it easy to tighten, for example to show phone numbers
+// only once the fare is agreed.
+export function contactsVisible(status: JobStatus): boolean {
+  return status !== 'passed';
+}
+
 const rank: Record<JobStatus, number> = {
   'your-turn': 0,
   waiting: 1,
