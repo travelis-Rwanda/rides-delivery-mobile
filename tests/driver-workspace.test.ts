@@ -58,7 +58,8 @@ test('a driver who passes sees the job as passed, and the next driver gets it', 
   const counter = n.offers.find((o) => o.id === 'r1:driver-1:2')!;
   n = must(declineAndAdvance(n, counter.id, 'driver'));
   assert.equal(jobStatus(n, 'driver-1'), 'passed');
-  assert.equal(jobStatus(n, 'driver-2'), 'waiting');
+  // The customer's price was passed on, so it is the next driver's turn.
+  assert.equal(jobStatus(n, 'driver-2'), 'your-turn');
 });
 
 test('an agreed fare shows as agreed for the winner and passed for earlier drivers', () => {

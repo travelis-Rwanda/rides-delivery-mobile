@@ -1,3 +1,4 @@
+
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
@@ -21,10 +22,12 @@ import {
 } from '../../../features/driver-workspace/jobs';
 import { JobDetails, JobTag } from '../../../features/driver-workspace/ui';
 import { declineAndAdvance } from '../../../features/negotiation/assignment';
+import { FinalOfferNotice } from '../../../features/negotiation/components/FinalOfferNotice';
 import { OfferBubble } from '../../../features/negotiation/components/OfferBubble';
 import { getMockDriver } from '../../../features/negotiation/mockDrivers';
 import {
   acceptOffer,
+  finalOfferDeadline,
   offerId,
   submitOffer,
   threadOf,
@@ -33,6 +36,7 @@ import {
 } from '../../../features/negotiation/negotiation';
 import { useNegotiation } from '../../../features/negotiation/NegotiationProvider';
 import { straightLineKm } from '../../../features/pricing/minimumFare';
+import { useNow } from '../../../hooks/useNow';
 import { usePalette } from '../../../hooks/usePalette';
 import { driverFareForTotal } from '../../../features/pricing/breakdown';
 
@@ -52,6 +56,13 @@ export default function DriverJobScreen() {
   const [counterText, setCounterText] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+
+  // While a final offer waits for an answer, count down the seconds left.
+  const earlyNegotiation = id ? negotiations[id] : undefined;
+  const finalDeadline = earlyNegotiation
+    ? finalOfferDeadline(earlyNegotiation)
+    : undefined;
+  const now = useNow(finalDeadline !== undefined);
 
   if (sessionLoading || requestsLoading || negotiationsLoading)
     return (
@@ -105,6 +116,12 @@ export default function DriverJobScreen() {
   const thread = threadOf(negotiation, driverId);
   const last = thread[thread.length - 1];
   const roundsLeft = negotiation.maxRoundsPerDriver - thread.length;
+
+  const secondsLeft =
+    finalDeadline === undefined
+      ? undefined
+      : Math.max(0, Math.ceil((finalDeadline - now) / 1000));
+
   const km = request.pickupPoint
     ? straightLineKm(request.pickupPoint, driver.location)
     : null;
@@ -120,7 +137,8 @@ export default function DriverJobScreen() {
   };
 
   const accept = (offerKey: string) =>
-    run((current) => acceptOffer(current, offerKey, 'driver'));
+    run((current) => acceptOffer(current, offerKey, 'driver', Date.now()));
+
   // Passing hands the delivery to the next best driver.
   const pass = (offerKey: string) =>
     run((current) => declineAndAdvance(current, offerKey, 'driver'));
@@ -212,6 +230,17 @@ export default function DriverJobScreen() {
           ))}
         </View>
 
+        {status !== 'agreed' &&
+          status !== 'passed' &&
+          secondsLeft !== undefined && (
+            <FinalOfferNotice
+              viewer="driver"
+              lastBy={last.by}
+              secondsLeft={secondsLeft}
+              otherName="the customer"
+            />
+          )}
+
         {status === 'waiting' && (
           <Text className="mt-2 text-sm leading-6 text-muted-foreground">
             Waiting for the customer to reply. They respond from their own
@@ -239,12 +268,7 @@ export default function DriverJobScreen() {
                   setCounterOpen(true);
                 }}
               />
-            ) : (
-              <Text className="text-xs leading-5 text-muted-foreground">
-                This is the customer’s final offer. Accept it, or pass on the
-                job.
-              </Text>
-            )}
+            ) : null}
             <Button
               label="Pass on this job"
               icon="close"

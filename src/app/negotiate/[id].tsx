@@ -21,10 +21,12 @@ import {
   declineAndAdvance,
   matchSummary,
 } from '../../features/negotiation/assignment';
+import { FinalOfferNotice } from '../../features/negotiation/components/FinalOfferNotice';
 import { OfferBubble } from '../../features/negotiation/components/OfferBubble';
 import { getMockDriver } from '../../features/negotiation/mockDrivers';
 import {
   acceptOffer,
+  finalOfferDeadline,
   offerId,
   submitOffer,
   threadOf,
@@ -39,6 +41,7 @@ import {
   tripKey,
 } from '../../features/pricing/forRequest';
 import { straightLineKm } from '../../features/pricing/minimumFare';
+import { useNow } from '../../hooks/useNow';
 import { usePalette } from '../../hooks/usePalette';
 
 export default function NegotiateScreen() {
@@ -62,6 +65,12 @@ export default function NegotiateScreen() {
   // Offers saved before drivers were matched have no assignment. Start again.
   const legacy =
     !!negotiation && negotiation.status === 'open' && !negotiation.assignment;
+
+  // While a final offer waits for an answer, count down the seconds left.
+  const finalDeadline = negotiation
+    ? finalOfferDeadline(negotiation)
+    : undefined;
+  const now = useNow(finalDeadline !== undefined);
 
   // Match a driver the first time this screen opens, and start again if the
   // trip changed since the offers were made.
@@ -193,6 +202,7 @@ export default function NegotiateScreen() {
   const driverId = assignment?.current ?? lockedOffer?.driverId;
   const driver = driverId ? getMockDriver(driverId) : undefined;
   const thread = driverId ? threadOf(negotiation, driverId) : [];
+  const carriedOffer = thread.find((offer) => offer.carriedFrom);
   const last = thread[thread.length - 1];
   const distanceKm =
     request.pickupPoint && driver
@@ -201,6 +211,12 @@ export default function NegotiateScreen() {
   const driverAsking = last?.status === 'pending' && last.by === 'driver';
   const waiting = last?.status === 'pending' && last.by === 'customer';
   const roundsLeft = negotiation.maxRoundsPerDriver - thread.length;
+
+  const secondsLeft =
+    finalDeadline === undefined
+      ? undefined
+      : Math.max(0, Math.ceil((finalDeadline - now) / 1000));
+
   const noDrivers = !locked && !!assignment && assignment.current === undefined;
   const skipped = assignment?.tried.length ?? 0;
 
@@ -215,7 +231,7 @@ export default function NegotiateScreen() {
   };
 
   const accept = (offerKey: string) =>
-    run((current) => acceptOffer(current, offerKey, 'customer'));
+    run((current) => acceptOffer(current, offerKey, 'customer', Date.now()));
 
   // Declining ends this driver's chance, so the next best driver steps in.
   const decline = (offerKey: string) =>
@@ -332,8 +348,9 @@ export default function NegotiateScreen() {
             )}
             {skipped > 0 && !locked && (
               <Text className="mt-2 text-xs leading-5 text-muted-foreground">
-                Your earlier driver didn’t reach a deal, so we moved on to{' '}
-                {driver.name}.
+                {carriedOffer
+                  ? `Your earlier driver passed, so we sent your offer of ${formatMoney(carriedOffer.amount)} to ${driver.name}.`
+                  : `Your earlier driver didn’t reach a deal, so we moved on to ${driver.name}.`}
               </Text>
             )}
           </View>
@@ -349,6 +366,15 @@ export default function NegotiateScreen() {
             />
           ))}
         </View>
+
+        {driver && last && !locked && secondsLeft !== undefined && (
+          <FinalOfferNotice
+            viewer="customer"
+            lastBy={last.by}
+            secondsLeft={secondsLeft}
+            otherName={driver.name}
+          />
+        )}
 
         {driver && driverAsking && !locked && !counterOpen && (
           <View className="mt-2 gap-2">
@@ -370,12 +396,7 @@ export default function NegotiateScreen() {
                   setCounterOpen(true);
                 }}
               />
-            ) : (
-              <Text className="text-xs leading-5 text-muted-foreground">
-                This is the final offer. Accept it, or decline to try the next
-                driver.
-              </Text>
-            )}
+            ) : null}
             <Button
               label="Decline and try the next driver"
               icon="close"
