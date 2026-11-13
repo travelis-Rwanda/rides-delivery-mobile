@@ -10,8 +10,14 @@ import {
   type PropsWithChildren,
 } from 'react';
 
+import { expireAll } from './assignment';
 import { openWithMockOffers } from './mockDrivers';
-import { isNegotiation, type Negotiation, type Result } from './negotiation';
+import {
+  finalOfferDeadline,
+  isNegotiation,
+  type Negotiation,
+  type Result,
+} from './negotiation';
 import type { Job } from './selection';
 
 const STORAGE_KEY = 'rides.delivery.negotiations.v1';
@@ -137,6 +143,38 @@ export function NegotiationProvider({ children }: PropsWithChildren) {
     },
     [commit, loadError, loading],
   );
+
+    // A final offer runs out even when nobody has its screen open, so one timer
+  // watches them all. It sleeps until the earliest deadline, then moves every
+  // expired negotiation on to its next driver.
+  const [sweepTick, setSweepTick] = useState(0);
+  const blockedUntil = useRef(0);
+  useEffect(() => {
+    if (loading || loadError) return;
+    const deadlines = Object.values(negotiations)
+      .map((entry) => finalOfferDeadline(entry))
+      .filter((at): at is number => at !== undefined);
+    if (deadlines.length === 0) return;
+    const wakeAt = Math.max(Math.min(...deadlines), blockedUntil.current);
+    const timer = setTimeout(
+      () => {
+        const next = expireAll(current.current, Date.now());
+        if (next === current.current) {
+          setSweepTick((tick) => tick + 1); // woke a moment early, look again
+          return;
+        }
+        // If saving fails, wait a few seconds before trying again.
+        blockedUntil.current = Date.now() + 5000;
+        commit(next)
+          .then(() => {
+            blockedUntil.current = 0;
+          })
+          .catch(() => {});
+      },
+      Math.max(wakeAt - Date.now(), 0) + 25,
+    );
+    return () => clearTimeout(timer);
+  }, [negotiations, loading, loadError, commit, sweepTick]);
 
   // Forget a negotiation, e.g. when the trip changed and old offers are void.
   const discard = useCallback(

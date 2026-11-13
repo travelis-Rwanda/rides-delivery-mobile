@@ -19,7 +19,10 @@ export function OfferBubble({
   const mine = offer.by === viewer;
   const who = bubbleLabel(offer, index, viewer);
   const caption = statusCaption(offer, viewer);
-  const faded = offer.status === 'countered' || offer.status === 'declined';
+  const faded =
+    offer.status === 'countered' ||
+    offer.status === 'declined' ||
+    offer.status === 'expired';
   return (
     <View
       accessible
