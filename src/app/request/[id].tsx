@@ -20,6 +20,8 @@ import { selectedItems } from '../../features/delivery/model';
 import { contactLine } from '../../features/delivery/contact';
 import { useNegotiation } from '../../features/negotiation/NegotiationProvider';
 import { requestPricing } from '../../features/pricing/forRequest';
+import { isPaid } from '../../features/payments/payment';
+import { usePayments } from '../../features/payments/PaymentProvider';
 import {
   formatMoney,
   getService,
@@ -35,6 +37,7 @@ export default function ReviewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { requests, loading, save, loadError, reload } = useDelivery();
   const { negotiations, discard } = useNegotiation();
+  const { payments } = usePayments();  
   const palette = usePalette();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -44,6 +47,9 @@ export default function ReviewScreen() {
   }>();
 
   const request = requests.find((entry) => entry.id === id);
+  // Once paid, the trip is settled, so it can no longer be edited here.
+  const payment = request ? payments[request.id] : undefined;
+  const paid = !!payment && isPaid(payment);
 
   if (loading)
     return (
@@ -207,19 +213,21 @@ export default function ReviewScreen() {
               </Text>
             </View>
 
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Edit request"
-              onPress={() =>
-                router.push({
-                  pathname: '/delivery/[service]',
-                  params: { service: request.service, id: request.id },
-                })
-              }
-              className="h-11 w-11 items-center justify-center rounded-full bg-muted"
-            >
-              <Icon name="edit" color={palette.primary} size={19} />
-            </Pressable>
+            {!paid && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Edit request"
+                onPress={() =>
+                  router.push({
+                    pathname: '/delivery/[service]',
+                    params: { service: request.service, id: request.id },
+                  })
+                }
+                className="h-11 w-11 items-center justify-center rounded-full bg-muted"
+              >
+                <Icon name="edit" color={palette.primary} size={19} />
+              </Pressable>
+            )}
           </View>
 
           <View className="gap-5 p-5">
