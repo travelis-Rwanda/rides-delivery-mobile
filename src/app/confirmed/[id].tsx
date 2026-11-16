@@ -8,7 +8,6 @@ import {
   EmptyState,
   Footer,
   Header,
-  Notice,
   Page,
   PageScroll,
 } from '../../components/ui/primitives';
@@ -16,6 +15,7 @@ import { BrandMark } from '../../components/ui/Brand';
 import { useDelivery } from '../../features/delivery/DeliveryProvider';
 import { getService } from '../../features/delivery/services';
 import { usePalette } from '../../hooks/usePalette';
+import { PaymentSection } from '../../features/payments/components/PaymentSection';
 
 export default function ConfirmedScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -93,10 +93,7 @@ export default function ConfirmedScreen() {
             </View>
           </View>
         </View>
-        <Notice>
-          No request has been sent, no driver has been booked, and you haven’t
-          been charged. You can revisit or edit this preview in Activity.
-        </Notice>
+        <PaymentSection request={request} />
       </PageScroll>
       <Footer>
         <Button

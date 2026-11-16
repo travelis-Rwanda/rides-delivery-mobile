@@ -14,6 +14,7 @@ import { colors } from '../constants/colors';
 import { DeliveryProvider } from '../features/delivery/DeliveryProvider';
 import { NegotiationProvider } from '../features/negotiation/NegotiationProvider';
 import { MerchantCartProvider } from '../features/merchants/MerchantCartProvider';
+import { PaymentProvider } from '../features/payments/PaymentProvider';
 import { usePalette } from '../hooks/usePalette';
 
 void SplashScreen.preventAutoHideAsync();
@@ -74,6 +75,7 @@ export default function RootLayout() {
       >
         <DeliveryProvider>
           <NegotiationProvider>
+            <PaymentProvider>
             <MerchantCartProvider>
               <StatusBar style="auto" />
               <Stack
@@ -86,6 +88,7 @@ export default function RootLayout() {
                 }}
               />
             </MerchantCartProvider>
+            </PaymentProvider>
           </NegotiationProvider>
         </DeliveryProvider>
       </ThemeProvider>
