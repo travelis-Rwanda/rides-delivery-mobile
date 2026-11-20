@@ -52,9 +52,13 @@ import {
   type Place,
 } from '../../features/maps/places';
 import {
+  requestedVehicle,
   suggestedVehicle,
   vehicleLabels,
+  vehicleOptions,
+  vehicleWarning,
 } from '../../features/negotiation/selection';
+import { VehicleIcon } from '../../components/ui/VehicleIcon';
 import { packagingFee } from '../../features/pricing/packaging';
 
 export default function ServiceRoute() {
@@ -385,6 +389,54 @@ function ServiceForm({
           </Notice>
         </View>
 
+        <Text
+          accessibilityRole="header"
+          className="mb-4 text-lg font-bold text-foreground"
+        >
+          {merchantOrder ? 'Where should it arrive?' : 'From here to there'}
+        </Text>
+        <View className="mb-6 gap-5">
+          {!merchantOrder && (
+            <AddressField
+              key={form.method}
+              label={
+                form.method === 'collection'
+                  ? 'Collection point'
+                  : receiving
+                    ? 'Sender’s pickup address'
+                    : 'Pickup address'
+              }
+              placeholder={
+                form.method === 'collection'
+                  ? 'Enter your preferred collection point'
+                  : 'Area, street, building or landmark'
+              }
+              value={form.pickup}
+              point={form.pickupPoint}
+              onChangeText={(text) => changeAddress('pickup', text)}
+              onSelectPlace={(place) => changeAddress('pickup', place)}
+              error={errors.pickup}
+              maxLength={200}
+              autoComplete="street-address"
+              useDeviceLocation={!receiving && form.method === 'pickup'}
+              autoFill={!existing}
+            />
+          )}
+          <AddressField
+            label={receiving ? 'Your delivery address' : 'Delivery address'}
+            placeholder="Area, street, building or landmark"
+            value={form.destination}
+            point={form.destinationPoint}
+            onChangeText={(text) => changeAddress('destination', text)}
+            onSelectPlace={(place) => changeAddress('destination', place)}
+            error={errors.destination}
+            maxLength={200}
+            autoComplete="street-address"
+            useDeviceLocation={receiving}
+            autoFill={!existing}
+          />
+        </View>
+
         {merchantOrder && merchant ? (
           <View className="mb-6 rounded-[22px] bg-card p-4">
             <View className="mb-4 flex-row items-center justify-between gap-2">
@@ -678,17 +730,59 @@ function ServiceForm({
             )}
             {(service.id === 'parcel' || service.id === 'cargo') && (
               <View className="gap-4">
-                <View className="rounded-xl border border-border bg-card p-4">
-                  <Text className="text-xs font-medium tracking-wider text-muted-foreground">
-                    SUGGESTED VEHICLE
+                <View>
+                  <Text className="mb-3 text-sm font-medium text-foreground">
+                    Which vehicle?
                   </Text>
-                  <Text className="mt-1 text-base font-bold text-foreground">
-                    {vehicleLabels[suggestedVehicle(form)]}
-                  </Text>
-                  <Text className="mt-1 text-xs leading-5 text-muted-foreground">
-                    Based on the {form.size.toLowerCase()} size. We only match
-                    you with drivers whose vehicle can carry it.
-                  </Text>
+                  <View className="flex-row gap-2">
+                    {vehicleOptions(form).map((kind) => {
+                      const selected = requestedVehicle(form) === kind;
+                      const suggested = suggestedVehicle(form) === kind;
+                      return (
+                        <Pressable
+                          key={kind}
+                          accessibilityRole="radio"
+                          accessibilityState={{ checked: selected }}
+                          accessibilityLabel={`${vehicleLabels[kind]}${suggested ? ', suggested' : ''}`}
+                          onPress={() =>
+                            update('vehicle', suggested ? undefined : kind)
+                          }
+                          className={`min-h-[112px] flex-1 items-center justify-center gap-1 rounded-xl border px-2 py-3 ${selected ? 'border-primary bg-secondary' : 'border-border bg-card'}`}
+                        >
+                          <VehicleIcon
+                            kind={kind}
+                            size={48}
+                            color={
+                              selected
+                                ? palette.primary
+                                : palette['muted-foreground']
+                            }
+                          />
+                          <Text
+                            className={`text-xs font-medium ${selected ? 'text-primary' : 'text-foreground'}`}
+                          >
+                            {vehicleLabels[kind]}
+                          </Text>
+                          {suggested && (
+                            <Text className="text-[10px] font-medium text-primary">
+                              Suggested
+                            </Text>
+                          )}
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  {vehicleWarning(form) ? (
+                    <View className="mt-3 rounded-xl bg-warning-muted p-3">
+                      <Text className="text-xs leading-5 text-foreground">
+                        {vehicleWarning(form)}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text className="mt-2 text-xs leading-5 text-muted-foreground">
+                      {`Based on the ${form.size.toLowerCase()} size we suggest the ${vehicleLabels[suggestedVehicle(form)]}. You can choose another.`}
+                    </Text>
+                  )}
                 </View>
                 <View>
                   <Text className="mb-3 text-sm font-medium text-foreground">
@@ -781,74 +875,7 @@ function ServiceForm({
           </View>
         )}
 
-        <Text
-          accessibilityRole="header"
-          className="mb-4 text-lg font-bold text-foreground"
-        >
-          {merchantOrder ? 'Where should it arrive?' : 'From here to there'}
-        </Text>
         <View className="gap-5">
-          {!merchantOrder && (
-            <AddressField
-              key={form.method}
-              label={
-                form.method === 'collection'
-                  ? 'Collection point'
-                  : receiving
-                    ? 'Sender’s pickup address'
-                    : 'Pickup address'
-              }
-              placeholder={
-                form.method === 'collection'
-                  ? 'Enter your preferred collection point'
-                  : 'Area, street, building or landmark'
-              }
-              value={form.pickup}
-              point={form.pickupPoint}
-              onChangeText={(text) => changeAddress('pickup', text)}
-              onSelectPlace={(place) => changeAddress('pickup', place)}
-              error={errors.pickup}
-              maxLength={200}
-              autoComplete="street-address"
-              useDeviceLocation={!receiving && form.method === 'pickup'}
-              autoFill={!existing}
-            />
-          )}
-          <AddressField
-            label={receiving ? 'Your delivery address' : 'Delivery address'}
-            placeholder="Area, street, building or landmark"
-            value={form.destination}
-            point={form.destinationPoint}
-            onChangeText={(text) => changeAddress('destination', text)}
-            onSelectPlace={(place) => changeAddress('destination', place)}
-            error={errors.destination}
-            maxLength={200}
-            autoComplete="street-address"
-            useDeviceLocation={receiving}
-            autoFill={!existing}
-          />
-          {form.pickupPoint && form.destinationPoint ? (
-            <RoadRouteCard
-              key={tripKey}
-              pickup={form.pickupPoint}
-              delivery={form.destinationPoint}
-              route={form.roadRoute}
-              onRoute={(roadRoute) =>
-                setForm((current) =>
-                  current.pickupPoint &&
-                  current.destinationPoint &&
-                  routeKey(current.pickupPoint, current.destinationPoint) ===
-                    tripKey
-                    ? { ...current, roadRoute }
-                    : current,
-                )
-              }
-            />
-          ) : (
-            <Text className="text-xs leading-5 text-muted-foreground">
-              Set both stops on the map to see road distance and drive time.
-            </Text>
-          )}
           {!merchantOrder && (
             <View className="gap-6">
               <ContactFields
@@ -890,6 +917,28 @@ function ServiceForm({
             maxLength={500}
             style={{ minHeight: 96, textAlignVertical: 'top' }}
           />
+          {form.pickupPoint && form.destinationPoint ? (
+            <RoadRouteCard
+              key={tripKey}
+              pickup={form.pickupPoint}
+              delivery={form.destinationPoint}
+              route={form.roadRoute}
+              onRoute={(roadRoute) =>
+                setForm((current) =>
+                  current.pickupPoint &&
+                  current.destinationPoint &&
+                  routeKey(current.pickupPoint, current.destinationPoint) ===
+                    tripKey
+                    ? { ...current, roadRoute }
+                    : current,
+                )
+              }
+            />
+          ) : (
+            <Text className="text-xs leading-5 text-muted-foreground">
+              Set both stops on the map to see road distance and drive time.
+            </Text>
+          )}
         </View>
         {Object.values(errors).some(Boolean) && (
           <Text

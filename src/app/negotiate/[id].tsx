@@ -319,7 +319,7 @@ export default function NegotiateScreen() {
             </Text>
             <Text className="text-sm leading-6 text-muted-foreground">
               {assignment.order.length === 0
-                ? 'None of our drivers has a vehicle that fits this size and service. Try a different size.'
+                ? 'None of our drivers has a vehicle that fits this size and service. Try a different vehicle or size.'
                 : 'Every driver we could match has passed on this delivery. You can search again.'}
             </Text>
             {assignment.order.length > 0 && (
