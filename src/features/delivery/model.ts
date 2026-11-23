@@ -13,6 +13,11 @@ import {
   type Coordinate,
   type RoadRoute,
 } from '../maps/places';
+import {
+  vehicleKinds,
+  vehicleOptions,
+  type VehicleKind,
+} from '../negotiation/selection';
 
 export type ParcelDirection = 'send' | 'receive';
 
@@ -33,6 +38,8 @@ export type DeliveryRequest = {
   urgent?: boolean;
   // The customer wants the item packaged, for an extra fee (parcel and cargo).
   packaging?: boolean;
+  // The vehicle the customer chose. Without one, the suggested vehicle is used.
+  vehicle?: VehicleKind;
   // Who the driver meets at each end, so they can reach them. Parcel and
   // cargo only.
   pickupContact?: Contact;
@@ -101,6 +108,13 @@ export function validateRequest(
         : 'Enter a pickup address.';
   if (!request.destination.trim())
     errors.destination = 'Enter a delivery address.';
+  // A chosen vehicle has to be one that can carry this kind of delivery.
+  if (
+    !merchantOrder &&
+    request.vehicle &&
+    !vehicleOptions(request).includes(request.vehicle)
+  )
+    errors.vehicle = 'Choose a vehicle that can carry this item.';
   if (!merchantOrder && !request.description.trim())
     errors.description =
       request.parcelDirection === 'receive'
@@ -160,6 +174,8 @@ export function isDeliveryRequest(value: unknown): value is DeliveryRequest {
     ['Small', 'Medium', 'Large'].includes(r.size as string) &&
     (r.urgent === undefined || typeof r.urgent === 'boolean') &&
     (r.packaging === undefined || typeof r.packaging === 'boolean') &&
+    (r.vehicle === undefined ||
+      vehicleKinds.includes(r.vehicle as VehicleKind)) &&
     (r.pickupContact === undefined || isContact(r.pickupContact)) &&
     (r.receiverContact === undefined || isContact(r.receiverContact)) &&
     typeof r.previewConfirmed === 'boolean' &&

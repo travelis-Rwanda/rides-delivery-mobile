@@ -15,6 +15,7 @@ import { DeliveryProvider } from '../features/delivery/DeliveryProvider';
 import { NegotiationProvider } from '../features/negotiation/NegotiationProvider';
 import { MerchantCartProvider } from '../features/merchants/MerchantCartProvider';
 import { PaymentProvider } from '../features/payments/PaymentProvider';
+import { TripProvider } from '../features/trips/TripProvider';
 import { usePalette } from '../hooks/usePalette';
 
 void SplashScreen.preventAutoHideAsync();
@@ -76,18 +77,20 @@ export default function RootLayout() {
         <DeliveryProvider>
           <NegotiationProvider>
             <PaymentProvider>
-            <MerchantCartProvider>
-              <StatusBar style="auto" />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  // Android's default fade can expose the window between screens.
-                  animation:
-                    Platform.OS === 'android' ? 'slide_from_right' : 'default',
-                  contentStyle: { backgroundColor: palette.background },
-                }}
-              />
-            </MerchantCartProvider>
+              <TripProvider>
+                <MerchantCartProvider>
+                  <StatusBar style="auto" />
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      // Android's default fade can expose the window between screens.
+                      animation:
+                        Platform.OS === 'android' ? 'slide_from_right' : 'default',
+                      contentStyle: { backgroundColor: palette.background },
+                    }}
+                  />
+                </MerchantCartProvider>
+              </TripProvider>
             </PaymentProvider>
           </NegotiationProvider>
         </DeliveryProvider>

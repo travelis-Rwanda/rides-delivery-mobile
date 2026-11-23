@@ -27,6 +27,7 @@ import { getMockDriver } from '../../features/negotiation/mockDrivers';
 import {
   acceptOffer,
   finalOfferDeadline,
+  messagesLeft,
   offerId,
   submitOffer,
   threadOf,
@@ -211,6 +212,10 @@ export default function NegotiateScreen() {
   const driverAsking = last?.status === 'pending' && last.by === 'driver';
   const waiting = last?.status === 'pending' && last.by === 'customer';
   const roundsLeft = negotiation.maxRoundsPerDriver - thread.length;
+  const myMessagesLeft = driverId
+    ? messagesLeft(negotiation, driverId, 'customer')
+    : 0;
+  const canCounter = myMessagesLeft > 0 && roundsLeft > 0;
 
   const secondsLeft =
     finalDeadline === undefined
@@ -319,7 +324,7 @@ export default function NegotiateScreen() {
             </Text>
             <Text className="text-sm leading-6 text-muted-foreground">
               {assignment.order.length === 0
-                ? 'None of our drivers has a vehicle that fits this size and service. Try a different size.'
+                ? 'None of our drivers has a vehicle that fits this size and service. Try a different vehicle or size.'
                 : 'Every driver we could match has passed on this delivery. You can search again.'}
             </Text>
             {assignment.order.length > 0 && (
@@ -384,7 +389,7 @@ export default function NegotiateScreen() {
               disabled={busy}
               onPress={() => void accept(last.id)}
             />
-            {roundsLeft > 0 ? (
+            {canCounter ? (
               <Button
                 label="Counter-offer"
                 icon="edit"

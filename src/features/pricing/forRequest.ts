@@ -10,6 +10,7 @@ import { isFareService, pricingConfig } from './config';
 import { addPackaging } from './packaging';
 import { minimumFare, roundUp, type MinimumFare } from './minimumFare';
 import { coordinateKey, type Coordinate } from '../maps/places';
+import { suggestedVehicle } from '../negotiation/selection';
 
 // The lowest total a saved request can be negotiated at, or null when the
 // service is not negotiated (restaurant and shop delivery use a fixed fare for
@@ -47,6 +48,11 @@ export function tripKey(request: DeliveryRequest) {
     // Standard requests keep the same key as before, so offers already made
     // for them are not thrown away.
     ...(request.urgent ? ['urgent'] : []),
+      // A different vehicle means different drivers, so offers made for another
+    // one no longer apply. Following the suggestion adds nothing.
+    ...(request.vehicle && request.vehicle !== suggestedVehicle(request)
+      ? [`vehicle:${request.vehicle}`]
+      : []),
   ].join('|');
 }
 

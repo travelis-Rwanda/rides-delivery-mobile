@@ -16,10 +16,12 @@ import { useDelivery } from '../../features/delivery/DeliveryProvider';
 import { getService } from '../../features/delivery/services';
 import { usePalette } from '../../hooks/usePalette';
 import { PaymentSection } from '../../features/payments/components/PaymentSection';
+import { useTrips } from '../../features/trips/TripProvider';
 
 export default function ConfirmedScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { requests, loading } = useDelivery();
+  const { trips } = useTrips();
   const palette = usePalette();
   const request = requests.find(
     (entry) => entry.id === id && entry.previewConfirmed,
@@ -96,7 +98,19 @@ export default function ConfirmedScreen() {
         <PaymentSection request={request} />
       </PageScroll>
       <Footer>
+        {trips[request.id] && (
+          <Button
+            label="Track delivery"
+            onPress={() =>
+              router.replace({
+                pathname: '/track/[id]',
+                params: { id: request.id },
+              })
+            }
+          />
+        )}
         <Button
+          secondary={!!trips[request.id]}
           label="View activity"
           onPress={() => router.replace('/activity')}
         />

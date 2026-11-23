@@ -1,3 +1,4 @@
+
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
@@ -13,12 +14,22 @@ import {
 } from '../../components/ui/primitives';
 import { useDelivery } from '../../features/delivery/DeliveryProvider';
 import { getService } from '../../features/delivery/services';
+import { TripCard } from '../../features/trips/components/TripCard';
+import { useTrips } from '../../features/trips/TripProvider';
+import { tripStatusLabels } from '../../features/trips/trip';
+import { activeTrips, pastTrips } from '../../features/trips/view';
 import { usePalette } from '../../hooks/usePalette';
 
 export default function ActivityScreen() {
   const [filter, setFilter] = useState<'Saved' | 'Active' | 'Past'>('Saved');
   const { requests, loading, loadError, reload } = useDelivery();
   const palette = usePalette();
+
+  const { trips, loading: tripsLoading } = useTrips();
+  const active = activeTrips(trips);
+  const past = pastTrips(trips);
+  const shown = filter === 'Active' ? active : filter === 'Past' ? past : [];
+
   return (
     <Page>
       <Header title="Activity" back={false} />
@@ -30,7 +41,7 @@ export default function ActivityScreen() {
           Your deliveries.
         </Text>
         <Text className="mb-6 mt-3 text-sm leading-6 text-muted-foreground">
-          Your saved plans and delivery updates.
+          Your saved plans, live deliveries and past trips.
         </Text>
         <View className="mb-6 flex-row gap-1 rounded-[16px] bg-muted p-1">
           {(['Saved', 'Active', 'Past'] as const).map((label) => (
@@ -48,11 +59,14 @@ export default function ActivityScreen() {
                 {label === 'Saved' && requests.length > 0
                   ? ` (${requests.length})`
                   : ''}
+                {label === 'Active' && active.length > 0
+                  ? ` (${active.length})`
+                  : ''}
               </Text>
             </Pressable>
           ))}
         </View>
-        {loading ? (
+        {loading || tripsLoading ? (
           <View className="items-center gap-4 py-16">
             <ActivityIndicator color={palette.primary} />
             <Text className="text-sm text-muted-foreground">
@@ -67,6 +81,16 @@ export default function ActivityScreen() {
           >
             <Button label="Try again" onPress={() => void reload()} />
           </EmptyState>
+        ) : filter !== 'Saved' && shown.length > 0 ? (
+          <View className="gap-3">
+            {shown.map((trip) => (
+              <TripCard
+                key={trip.requestId}
+                trip={trip}
+                request={requests.find((entry) => entry.id === trip.requestId)}
+              />
+            ))}
+          </View>
         ) : filter === 'Saved' && requests.length > 0 ? (
           <View className="gap-3">
             <Text className="mb-1 text-xs leading-5 text-muted-foreground">
@@ -109,10 +133,14 @@ export default function ActivityScreen() {
                       </Text>
                     </View>
                     <View
-                      className={`rounded-full px-2.5 py-1 ${request.previewConfirmed ? 'bg-success-muted' : 'bg-muted'}`}
+                      className={`rounded-full px-2.5 py-1 ${request.previewConfirmed || trips[request.id] ? 'bg-success-muted' : 'bg-muted'}`}
                     >
                       <Text className="text-[10px] font-medium text-foreground">
-                        {request.previewConfirmed ? 'PREVIEW READY' : 'DRAFT'}
+                        {trips[request.id]
+                          ? tripStatusLabels[trips[request.id].status].toUpperCase()
+                          : request.previewConfirmed
+                            ? 'PREVIEW READY'
+                            : 'DRAFT'}
                       </Text>
                     </View>
                   </View>
@@ -148,8 +176,8 @@ export default function ActivityScreen() {
               filter === 'Saved'
                 ? 'Choose a service and prepare your first request. You can revisit the details here.'
                 : filter === 'Active'
-                  ? 'Live bookings will appear here when delivery services are available. Saved previews stay in the Saved tab.'
-                  : 'Your completed deliveries will appear here. For now, explore what Rides can deliver.'
+                  ? 'Deliveries you have paid for appear here while they are on the move. Saved previews stay in the Saved tab.'
+                  : 'Your completed deliveries will appear here, with your rating and tip.'
             }
           >
             <Button

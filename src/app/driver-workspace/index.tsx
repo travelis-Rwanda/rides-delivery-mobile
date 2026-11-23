@@ -23,6 +23,10 @@ import {
 } from '../../features/negotiation/mockDrivers';
 import { useNegotiation } from '../../features/negotiation/NegotiationProvider';
 import { straightLineKm } from '../../features/pricing/minimumFare';
+import { EarningsSection } from '../../features/trips/components/EarningsSection';
+import { useTrips } from '../../features/trips/TripProvider';
+import { tripStatusLabels } from '../../features/trips/trip';
+import { isActiveTrip } from '../../features/trips/view';
 import { usePalette } from '../../hooks/usePalette';
 
 export default function DriverWorkspaceHome() {
@@ -36,13 +40,32 @@ export default function DriverWorkspaceHome() {
     reload,
   } = useNegotiation();
 
+  const { trips, loading: tripsLoading } = useTrips();
+
   const driver = getMockDriver(driverId);
-  const loading = sessionLoading || requestsLoading || negotiationsLoading;
-  // A job whose request was cancelled has nothing left to show.
-  const jobs = jobsForDriver(negotiations, driverId).filter((job) =>
-    requests.some((request) => request.id === job.requestId),
-  );
+  const loading =
+    sessionLoading || requestsLoading || negotiationsLoading || tripsLoading;
+
+  // This driver's delivery for a request, once the customer has paid.
+  const tripOf = (requestId: string) =>
+    trips[requestId]?.driverId === driverId ? trips[requestId] : undefined;
+
+  const inProgress = (requestId: string) => {
+    const trip = tripOf(requestId);
+    return !!trip && isActiveTrip(trip);
+  };
+
+  // A job whose request was cancelled has nothing left to show. Deliveries in
+  // progress come first, then the jobs that need a reply.
+  const jobs = jobsForDriver(negotiations, driverId)
+    .filter((job) => requests.some((request) => request.id === job.requestId))
+    .sort(
+      (a, b) =>
+        Number(inProgress(b.requestId)) - Number(inProgress(a.requestId)),
+    );
+
   const needsYou = jobs.filter((job) => job.status === 'your-turn').length;
+  const active = jobs.filter((job) => inProgress(job.requestId)).length;
 
   return (
     <Page>
@@ -89,13 +112,23 @@ export default function DriverWorkspaceHome() {
           })}
         </View>
 
+        {!loading && (
+          <EarningsSection
+            trips={trips}
+            driverId={driverId}
+            requests={requests}
+          />
+        )}
+
         <Text
           accessibilityRole="header"
           className="mb-3 text-lg font-medium text-foreground"
         >
-          {needsYou > 0
-            ? `Jobs (${needsYou} need${needsYou === 1 ? 's' : ''} you)`
-            : 'Jobs'}
+          {active > 0
+            ? `Jobs (${active} in progress)`
+            : needsYou > 0
+              ? `Jobs (${needsYou} need${needsYou === 1 ? 's' : ''} you)`
+              : 'Jobs'}
         </Text>
 
         {loading ? (
@@ -126,6 +159,7 @@ export default function DriverWorkspaceHome() {
                 request.pickupPoint && driver
                   ? straightLineKm(request.pickupPoint, driver.location)
                   : null;
+
               return (
                 <ScrollPressable
                   key={job.requestId}
@@ -140,11 +174,21 @@ export default function DriverWorkspaceHome() {
                   className="gap-2 rounded-[20px] bg-card p-4"
                 >
                   <View className="flex-row items-center justify-between gap-3">
-                    <JobTag status={job.status} />
+                    {tripOf(job.requestId) && job.status === 'agreed' ? (
+                      <View className="self-start rounded-full bg-success-muted px-2.5 py-1">
+                        <Text className="text-[10px] font-medium text-foreground">
+                          {tripStatusLabels[tripOf(job.requestId)!.status]}
+                        </Text>
+                      </View>
+                    ) : (
+                      <JobTag status={job.status} />
+                    )}
+
                     <Text className="text-base font-bold text-primary">
                       {formatMoney(job.lastOffer.amount)}
                     </Text>
                   </View>
+
                   <Text
                     numberOfLines={1}
                     className="text-sm font-medium text-foreground"

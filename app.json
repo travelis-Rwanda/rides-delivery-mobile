@@ -31,7 +31,7 @@
         "expo-image-picker",
         {
           "photosPermission": "Allow $(PRODUCT_NAME) to choose a photo for your shop or product.",
-          "cameraPermission": false,
+          "cameraPermission": "Allow $(PRODUCT_NAME) to take a photo of a delivered parcel as proof of delivery.",
           "microphonePermission": false
         }
       ],

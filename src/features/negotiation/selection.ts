@@ -5,7 +5,9 @@ import { straightLineKm } from '../pricing/minimumFare';
 
 type Size = DeliveryRequest['size'];
 
-export type VehicleKind = 'moto' | 'cab' | 'hilux';
+// Smallest first.
+export const vehicleKinds = ['moto', 'cab', 'hilux'] as const;
+export type VehicleKind = (typeof vehicleKinds)[number];
 
 export type Driver = {
   id: string;
@@ -24,6 +26,10 @@ export const vehicleLabels: Record<VehicleKind, string> = {
 // How much each vehicle can carry, smallest first.
 const capacity: Record<VehicleKind, number> = { moto: 1, cab: 2, hilux: 3 };
 
+// What a vehicle is picked for: the item, and the customer's own choice if
+// they made one.
+type VehicleJob = { service: ServiceId; size: Size; vehicle?: VehicleKind };
+
 // PLACEHOLDER RULES. The vehicle suggested for a job depends on its size, and
 // operations will confirm the real limits. Cargo always needs a pickup truck.
 export function suggestedVehicle(job: {
@@ -35,14 +41,35 @@ export function suggestedVehicle(job: {
   return job.size === 'Medium' ? 'cab' : 'moto';
 }
 
+// The vehicles a customer can choose from. Cargo needs a pickup truck; a parcel
+// can go in any of them, even one smaller than we suggest (the form warns).
+export function vehicleOptions(job: {
+  service: ServiceId;
+}): readonly VehicleKind[] {
+  return job.service === 'cargo' ? ['hilux'] : vehicleKinds;
+}
+
+// The vehicle the customer asked for, or the suggested one when they did not
+// choose. A choice that is not allowed for the service is ignored.
+export function requestedVehicle(job: VehicleJob): VehicleKind {
+  return job.vehicle && vehicleOptions(job).includes(job.vehicle)
+    ? job.vehicle
+    : suggestedVehicle(job);
+}
+
 // A driver can take the job when their vehicle can carry at least as much as
-// the suggested one, so a cab can take a small parcel but a motorbike cannot
+// the one requested, so a cab can take a small parcel but a motorbike cannot
 // take a medium one.
-export function vehicleFits(
-  kind: VehicleKind,
-  job: { service: ServiceId; size: Size },
-): boolean {
-  return capacity[kind] >= capacity[suggestedVehicle(job)];
+export function vehicleFits(kind: VehicleKind, job: VehicleJob): boolean {
+  return capacity[kind] >= capacity[requestedVehicle(job)];
+}
+
+// A gentle warning when the customer picks something smaller than we suggest.
+export function vehicleWarning(job: VehicleJob): string | undefined {
+  const asked = requestedVehicle(job);
+  const suggested = suggestedVehicle(job);
+  if (capacity[asked] >= capacity[suggested]) return undefined;
+  return `${vehicleLabels[asked]} is smaller than the ${vehicleLabels[suggested]} we suggest for a ${job.size.toLowerCase()} item. A driver may decline it.`;
 }
 
 export type RankedDriver = {
@@ -71,6 +98,7 @@ export function rankDrivers(input: {
   pickup?: Coordinate;
   service: ServiceId;
   size: Size;
+  vehicle?: VehicleKind;
   drivers: readonly Driver[];
   asks: Readonly<Record<string, number>>;
 }): DriverChoice {
@@ -124,6 +152,7 @@ export type Job = {
   service: ServiceId;
   size: Size;
   urgent: boolean;
+  vehicle?: VehicleKind;
   pickup?: Coordinate;
 };
 
@@ -132,6 +161,7 @@ export function jobOf(request: DeliveryRequest): Job {
     service: request.service,
     size: request.size,
     urgent: request.urgent === true,
+    vehicle: request.vehicle,
     pickup: request.pickupPoint,
   };
 }

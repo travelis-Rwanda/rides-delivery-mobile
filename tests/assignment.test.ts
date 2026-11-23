@@ -1,3 +1,4 @@
+
 /// <reference types="node" />
 
 import assert from 'node:assert/strict';
@@ -120,19 +121,55 @@ test('a driver walking away hands the delivery to the next best', () => {
 
 test('declining when the rounds have run out also moves on', () => {
   let n = open(standard);
-  // Eric offers (round 1), then the customer and Eric trade up to the limit.
+
+  // Eric offers, then the customer and Eric trade up to three messages each.
   n = must(counter(n, 'driver-1', 3000));
+
   n = must(
-    submitOffer(n, { id: 'a', driverId: 'driver-1', by: 'driver', amount: 3200, now: NOW }),
+    submitOffer(n, {
+      id: 'a',
+      driverId: 'driver-1',
+      by: 'driver',
+      amount: 3200,
+      now: NOW,
+    }),
   );
+
   n = must(counter(n, 'driver-1', 3100));
-  assert.equal(
-    submitOffer(n, { id: 'b', driverId: 'driver-1', by: 'driver', amount: 3150, now: NOW }).ok,
-    false,
-  ); // limit reached
-  const last = n.offers[n.offers.length - 1];
+
+  n = must(
+    submitOffer(n, {
+      id: 'c',
+      driverId: 'driver-1',
+      by: 'driver',
+      amount: 3180,
+      now: NOW,
+    }),
+  );
+
+  n = must(counter(n, 'driver-1', 3120));
+
+  // Eric has used all three messages and cannot counter again.
+  const fourthMessage = submitOffer(n, {
+    id: offerId(n, 'driver-1'),
+    driverId: 'driver-1',
+    by: 'driver',
+    amount: 3150,
+    now: NOW,
+  });
+
+  assert.equal(fourthMessage.ok, false);
+
+  // Eric declines the customer's final offer.
+  const last = n.offers.find(
+    (o) => o.driverId === 'driver-1' && o.status === 'pending',
+  )!;
+
   n = must(declineAndAdvance(n, last.id, 'driver'));
+
   assert.equal(n.assignment?.current, 'driver-2');
+  assert.deepEqual(n.assignment?.tried, ['driver-1']);
+  assert.ok(isNegotiation(n));
 });
 
 test('when every driver has been tried nobody is matched and nothing locks', () => {

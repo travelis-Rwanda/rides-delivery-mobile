@@ -1,4 +1,4 @@
-import type { Offer, Party } from './negotiation';
+import { MAX_MESSAGES_PER_PARTY, type Offer, type Party } from './negotiation';
 
 // Wording for one price message, seen from the viewer's side of the chat.
 // `index` is the message's position in the driver's thread, starting at 0.
@@ -34,7 +34,8 @@ export function statusCaption(offer: Offer, viewer: Party) {
   return ''; // countered: the next message is the reply
 }
 
-// What to tell each side while a final offer's clock is running.
+// What to tell each side while the driver's reply clock is running. The clock
+// only runs while the driver has not replied to the customer's message.
 export function finalOfferNotice(
   viewer: Party,
   lastBy: Party,
@@ -43,6 +44,13 @@ export function finalOfferNotice(
 ) {
   const time = `${secondsLeft} ${secondsLeft === 1 ? 'second' : 'seconds'}`;
   if (lastBy !== viewer)
-    return `Final offer. Accept within ${time}, or it moves on to the next driver.`;
-  return `Final offer sent. ${time} left for ${otherName} to accept before the job moves on.`;
+    return `Reply within ${time}, or the job moves on to the next driver.`;
+  return `Waiting for ${otherName} to reply. ${time} left before the job moves on.`;
+}
+
+// How many messages each side has left in this driver's chat.
+export function messagesLeftNote(left: number) {
+  if (left <= 0)
+    return 'You have no messages left in this chat. Accept or decline the last offer.';
+  return `You have ${left} of ${MAX_MESSAGES_PER_PARTY} messages left in this chat.`;
 }

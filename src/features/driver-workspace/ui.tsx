@@ -4,7 +4,7 @@ import { Text } from '../../components/ui/Text';
 import { Button } from '../../components/ui/primitives';
 import { formatPhone, type Contact } from '../delivery/contact';
 import type { DeliveryRequest } from '../delivery/model';
-import { suggestedVehicle, vehicleLabels } from '../negotiation/selection';
+import { requestedVehicle, suggestedVehicle, vehicleLabels } from '../negotiation/selection';
 import type { JobStatus } from './jobs';
 
 const tags: Record<JobStatus, { label: string; box: string; text: string }> = {
@@ -115,7 +115,7 @@ export function JobDetails({
       />
       <Detail
         label="Size"
-        value={`${request.size}, suggested vehicle: ${vehicleLabels[suggestedVehicle(request)]}`}
+        value={`${request.size}, vehicle: ${vehicleLabels[requestedVehicle(request)]}${request.vehicle && request.vehicle !== suggestedVehicle(request) ? ' (chosen by the customer)' : ''}`}
       />
       {request.packaging && (
         <Detail

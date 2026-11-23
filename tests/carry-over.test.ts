@@ -112,7 +112,7 @@ test('the next driver can counter or pass, like any other offer', () => {
 test('the carried price counts as one of the driver’s rounds', () => {
   const n = ericPasses();
   assert.equal(threadOf(n, 'driver-2').length, 2);
-  assert.equal(n.maxRoundsPerDriver, 4);
+  assert.equal(n.maxRoundsPerDriver, 6);
 });
 
 test('the price keeps moving on when each driver passes', () => {
