@@ -41,10 +41,12 @@ export type Result =
 const fail = (error: string): Result => ({ ok: false, error });
 const ok = (negotiation: Negotiation): Result => ({ ok: true, negotiation });
 
+export const MAX_MESSAGES_PER_PARTY = 3
+
 export function startNegotiation(
   requestId: string,
   minimumFare: number,
-  maxRoundsPerDriver = 4,
+  maxRoundsPerDriver = MAX_MESSAGES_PER_PARTY * 2,
   tripKey?: string,
 ): Negotiation {
   return {
@@ -57,12 +59,14 @@ export function startNegotiation(
   };
 }
 
-// Once a driver's chat reaches the round limit, the last offer is the final
-// one, and whoever it was sent to has this long to accept it.
+// How long a driver has to reply to the customer's message before the job moves
+// on to the next driver. The clock only ever runs on the driver: the customer
+// is never timed.
 export const FINAL_OFFER_WINDOW_MS = 20_000;
 
-// When the final offer in the current driver's chat runs out, as a timestamp in
-// milliseconds, or undefined while there is no final offer waiting.
+// When the current driver runs out of time to reply, as a timestamp in
+// milliseconds, or undefined while the driver is not being waited on (the
+// driver has replied, or the customer has the next move).
 export function finalOfferDeadline(
   n: Negotiation,
   windowMs: number = FINAL_OFFER_WINDOW_MS,
@@ -72,13 +76,24 @@ export function finalOfferDeadline(
   const thread = threadOf(n, current);
   const last = thread[thread.length - 1];
   if (!last || last.status !== 'pending') return undefined;
-  if (thread.length < n.maxRoundsPerDriver) return undefined;
+  if (last.by !== 'customer') return undefined; // the driver has already replied
   const sentAt = Date.parse(last.createdAt);
   return Number.isFinite(sentAt) ? sentAt + windowMs : undefined;
 }
 
 export function threadOf(n: Negotiation, driverId: string) {
   return n.offers.filter((offer) => offer.driverId === driverId);
+}
+
+// How many messages one side has sent in a driver's chat. A price passed on
+// from a driver who passed counts as the customer's first message.
+export function messagesSent(n: Negotiation, driverId: string, by: Party) {
+  return threadOf(n, driverId).filter((offer) => offer.by === by).length;
+}
+
+// How many more messages that side may send to this driver.
+export function messagesLeft(n: Negotiation, driverId: string, by: Party) {
+  return Math.max(0, MAX_MESSAGES_PER_PARTY - messagesSent(n, driverId, by));
 }
 
 // Submit a new offer or a counter-offer.
@@ -110,8 +125,13 @@ export function submitOffer(
     return fail('Wait for the other side to respond.');
   if (last && last.status !== 'pending')
     return fail('This offer is no longer open.');
-  if (thread.length >= n.maxRoundsPerDriver)
-    return fail('The negotiation limit was reached. Accept or decline the last offer.');
+  if (
+    messagesSent(n, input.driverId, input.by) >= MAX_MESSAGES_PER_PARTY ||
+    thread.length >= n.maxRoundsPerDriver
+  )
+    return fail(
+      `You have used all ${MAX_MESSAGES_PER_PARTY} of your messages. Accept or decline the last offer.`,
+    );
 
   const offers = n.offers.map((offer) =>
     offer === last ? { ...offer, status: 'countered' as const } : offer,

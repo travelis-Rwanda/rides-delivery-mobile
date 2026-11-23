@@ -28,14 +28,18 @@ import { getMockDriver } from '../../../features/negotiation/mockDrivers';
 import {
   acceptOffer,
   finalOfferDeadline,
+  messagesLeft,
   offerId,
   submitOffer,
   threadOf,
   type Negotiation,
   type Result,
 } from '../../../features/negotiation/negotiation';
+import { messagesLeftNote } from '../../../features/negotiation/chat';
 import { useNegotiation } from '../../../features/negotiation/NegotiationProvider';
 import { straightLineKm } from '../../../features/pricing/minimumFare';
+import { DriverTripSection } from '../../../features/trips/components/DriverTripSection';
+import { useTrips } from '../../../features/trips/TripProvider';
 import { useNow } from '../../../hooks/useNow';
 import { usePalette } from '../../../hooks/usePalette';
 import { driverFareForTotal } from '../../../features/pricing/breakdown';
@@ -52,6 +56,7 @@ export default function DriverJobScreen() {
     reload,
     update,
   } = useNegotiation();
+  const { trips, loading: tripsLoading } = useTrips();
   const [counterOpen, setCounterOpen] = useState(false);
   const [counterText, setCounterText] = useState('');
   const [error, setError] = useState('');
@@ -64,7 +69,7 @@ export default function DriverJobScreen() {
     : undefined;
   const now = useNow(finalDeadline !== undefined);
 
-  if (sessionLoading || requestsLoading || negotiationsLoading)
+  if (sessionLoading || requestsLoading || negotiationsLoading || tripsLoading)
     return (
       <Page>
         <Header title="Delivery job" />
@@ -113,9 +118,13 @@ export default function DriverJobScreen() {
     );
 
   const requestId = request.id;
+  // The delivery that starts once this driver's agreed fare is paid.
+  const trip = trips[requestId]?.driverId === driverId ? trips[requestId] : undefined;
   const thread = threadOf(negotiation, driverId);
   const last = thread[thread.length - 1];
   const roundsLeft = negotiation.maxRoundsPerDriver - thread.length;
+  const myMessagesLeft = messagesLeft(negotiation, driverId, 'driver');
+  const canCounter = myMessagesLeft > 0 && roundsLeft > 0;
 
   const secondsLeft =
     finalDeadline === undefined
@@ -208,9 +217,14 @@ export default function DriverJobScreen() {
               {formatMoney(negotiation.lockedFare ?? last.amount)}
             </Text>
             <Text className="mt-1 text-sm text-muted-foreground">
-              The customer continues to review their request.
+              {trip
+                ? 'The customer has paid.'
+                : 'The customer pays next. The delivery starts as soon as they do.'}
             </Text>
           </View>
+        )}
+        {status === 'agreed' && trip && (
+          <DriverTripSection trip={trip} request={request} />
         )}
 
         {status === 'passed' && (
@@ -250,13 +264,16 @@ export default function DriverJobScreen() {
 
         {status === 'your-turn' && !counterOpen && (
           <View className="mt-2 gap-2">
+            <Text className="text-xs leading-5 text-muted-foreground">
+              {messagesLeftNote(canCounter ? myMessagesLeft : 0)}
+            </Text>
             <Button
               label="Accept this price"
               icon="check"
               disabled={busy}
               onPress={() => void accept(last.id)}
             />
-            {roundsLeft > 0 ? (
+            {canCounter ? (
               <Button
                 label="Counter-offer"
                 icon="edit"
