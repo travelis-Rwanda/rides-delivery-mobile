@@ -163,7 +163,7 @@ export default function ShopOrderDetails() {
                     className={`mt-1 text-xs ${unavailable.includes(line) ? 'text-destructive' : 'text-muted-foreground'}`}
                   >
                     {unavailable.includes(line)
-                      ? 'Insufficient stock'
+                      ? 'Unavailable or insufficient stock'
                       : 'Available'}
                   </Text>
                 )}

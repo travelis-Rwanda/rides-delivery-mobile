@@ -1,11 +1,13 @@
 import { ConfirmRemoveButton } from '../../../components/ui/ConfirmRemoveButton';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Switch, View } from 'react-native';
 
 import { Button, EmptyState, Footer } from '../../../components/ui/primitives';
+import { Text } from '../../../components/ui/Text';
 import { useShopWorkspace } from '../../../features/shop-workspace/ShopWorkspaceProvider';
 import {
+  deleteProduct,
   wholeNumber,
   type ShopProduct,
 } from '../../../features/shop-workspace/model';
@@ -13,6 +15,7 @@ import {
   ShopPhotoEditor,
   useShopPhotoDraft,
 } from '../../../features/shop-workspace/ShopPhoto';
+import { deleteShopPhoto } from '../../../features/shop-workspace/photoStorage';
 import {
   ShopField,
   ShopIntro,
@@ -20,6 +23,7 @@ import {
   ShopPanel,
   ShopSection,
 } from '../../../features/shop-workspace/ui';
+import { usePalette } from '../../../hooks/usePalette';
 
 const emptyProduct: ShopProduct = {
   id: 'new',
@@ -28,6 +32,7 @@ const emptyProduct: ShopProduct = {
   category: '',
   price: 0,
   stock: 0,
+  available: true,
   variants: [],
 };
 const newId = () =>
@@ -54,6 +59,7 @@ export default function ShopProductRoute() {
 
 function ProductForm({ product }: { product: ShopProduct }) {
   const { update, saving } = useShopWorkspace();
+  const palette = usePalette();
   const creating = product.id === 'new';
   const photo = useShopPhotoDraft(product.photoKey);
   const [details, setDetails] = useState(product);
@@ -69,6 +75,23 @@ function ProductForm({ product }: { product: ShopProduct }) {
 
   function change<K extends keyof ShopProduct>(key: K, value: ShopProduct[K]) {
     setDetails((current) => ({ ...current, [key]: value }));
+  }
+
+  async function remove() {
+    let photoKey: string | undefined;
+    const saved = await update((current) => {
+      photoKey = current.products.find((item) => item.id === product.id)?.photoKey;
+      const next = deleteProduct(current, product.id);
+      if (
+        next.application.photoKey === photoKey ||
+        next.products.some((item) => item.photoKey === photoKey)
+      )
+        photoKey = undefined;
+      return next;
+    });
+    if (!saved) return;
+    if (photoKey) void deleteShopPhoto(photoKey).catch(() => {});
+    router.dismissTo('/shop-workspace/catalogue');
   }
 
   async function save() {
@@ -106,7 +129,7 @@ function ProductForm({ product }: { product: ShopProduct }) {
       description: details.description.trim(),
       price: priceValue,
       stock: variants.length ? 0 : (stockValue ?? 0),
-
+      available: details.available !== false,
       variants: nextVariants,
     };
     const saved = await photo.save((photoKey) => {
@@ -200,6 +223,31 @@ function ProductForm({ product }: { product: ShopProduct }) {
         <ShopPanel>
           <ShopSection
             icon="shop"
+            title="Availability"
+            description="Choose whether this product can be ordered. Stock quantities are kept when you switch it off."
+          />
+          <View className="min-h-11 flex-row items-center justify-between gap-3">
+            <Text className="flex-1 text-sm font-medium text-foreground">
+              {details.available !== false ? 'Available' : 'Unavailable'}
+            </Text>
+            <Switch
+              accessibilityLabel="Product availability"
+              accessibilityHint="Save the product to apply this change"
+              value={details.available !== false}
+              disabled={saving || photo.saving}
+              trackColor={{ false: palette.border, true: palette.success }}
+              ios_backgroundColor={palette.border}
+              onValueChange={(value) => change('available', value)}
+            />
+          </View>
+          <Text className="text-xs leading-5 text-muted-foreground">
+            Save the product to apply changes. Available products also need stock
+            before an order can be confirmed.
+          </Text>
+        </ShopPanel>
+        <ShopPanel>
+          <ShopSection
+            icon="shop"
             title="Stock & variations"
             description="A quantity of zero marks the product or variation as out of stock."
           />
@@ -270,6 +318,21 @@ function ProductForm({ product }: { product: ShopProduct }) {
             }
           />
         </ShopPanel>
+        {!creating && (
+          <ShopPanel>
+            <ShopSection
+              icon="minus"
+              title="Delete product"
+              description="Remove this product from your catalogue. Existing order details will be kept."
+            />
+            <ConfirmRemoveButton
+              label="Delete product"
+              description={`Delete “${product.name}” from your catalogue? Existing orders will keep their item details. This cannot be undone.`}
+              disabled={saving || photo.saving}
+              onConfirm={() => void remove()}
+            />
+          </ShopPanel>
+        )}
       </View>
     </ShopPage>
   );

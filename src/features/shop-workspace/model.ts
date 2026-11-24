@@ -9,6 +9,8 @@ export type ShopProduct = {
   category: string;
   price: number;
   stock: number;
+  // Products saved before availability controls were added default to available.
+  available?: boolean;
   photoKey?: string;
   imageKey?: string;
   imageUrl?: string;
@@ -75,6 +77,16 @@ export function totalStock(product: ShopProduct) {
     : product.stock;
 }
 
+export function deleteProduct(
+  workspace: ShopWorkspace,
+  productId: string,
+): ShopWorkspace {
+  return {
+    ...workspace,
+    products: workspace.products.filter((product) => product.id !== productId),
+  };
+}
+
 export function orderSubtotal(order: ShopOrder) {
   return order.lines.reduce(
     (sum, line) => sum + line.quantity * line.unitPrice,
@@ -83,7 +95,7 @@ export function orderSubtotal(order: ShopOrder) {
 }
 
 function stockForLine(product: ShopProduct | undefined, line: ShopOrderLine) {
-  if (!product) return 0;
+  if (!product || product.available === false) return 0;
   if (!product.variants.length) return line.variantId ? 0 : product.stock;
   return (
     product.variants.find((variant) => variant.id === line.variantId)?.stock ??

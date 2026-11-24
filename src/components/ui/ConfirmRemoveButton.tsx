@@ -35,11 +35,22 @@ export function ConfirmRemoveButton({
         animationType="fade"
         onRequestClose={() => setOpen(false)}
       >
-        <View className="flex-1 justify-center bg-black/70 px-6 py-12">
+        <View className="flex-1 bg-black/70">
           <ScrollView
             bounces={false}
-            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+            contentContainerStyle={{
+              flexGrow: 1,
+              justifyContent: 'center',
+              paddingHorizontal: 24,
+              paddingVertical: 48,
+            }}
           >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss dialog"
+              onPress={() => setOpen(false)}
+              className="absolute inset-0"
+            />
             <View
               accessibilityViewIsModal
               onAccessibilityEscape={() => setOpen(false)}
@@ -70,9 +81,9 @@ export function ConfirmRemoveButton({
                     setOpen(false);
                     onConfirm();
                   }}
-                  className="min-h-14 items-center justify-center rounded-[16px] bg-red-600 px-5 py-4 active:opacity-70"
+                  className="min-h-14 items-center justify-center rounded-[16px] bg-destructive px-5 py-4 active:opacity-70"
                 >
-                  <Text className="text-center text-sm font-medium text-white">
+                  <Text className="text-center text-sm font-medium text-destructive-foreground">
                     {label}
                   </Text>
                 </Pressable>

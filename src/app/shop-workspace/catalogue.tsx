@@ -18,7 +18,13 @@ import {
 } from '../../features/shop-workspace/ui';
 import { usePalette } from '../../hooks/usePalette';
 
-const filters = ['All products', 'In stock', 'Out of stock'] as const;
+const filters = [
+  'All products',
+  'Available',
+  'Unavailable',
+  'In stock',
+  'Out of stock',
+] as const;
 
 export default function ShopCatalogue() {
   const { workspace } = useShopWorkspace();
@@ -34,9 +40,14 @@ export default function ShopCatalogue() {
         .toLowerCase()
         .includes(query.trim().toLowerCase());
       const inStock = totalStock(product) > 0;
+      const available = product.available !== false;
       return (
         matches &&
-        (filter === 'All products' || inStock === (filter === 'In stock'))
+        (filter === 'All products' ||
+          (filter === 'Available' && available) ||
+          (filter === 'Unavailable' && !available) ||
+          (filter === 'In stock' && inStock) ||
+          (filter === 'Out of stock' && !inStock))
       );
     }) ?? [];
 
@@ -56,7 +67,7 @@ export default function ShopCatalogue() {
       <ShopIntro
         eyebrow="SHOP INVENTORY"
         title="Your products"
-        description="Find an item to update its photo, price, or stock."
+        description="View product details, stock, and availability. Open a product to change its status, edit, or delete it."
       />
       <View className="mb-4 gap-3">
         <ShopField
@@ -89,50 +100,59 @@ export default function ShopCatalogue() {
       <View className="gap-3">
         {products.map((product) => {
           const stock = totalStock(product);
+          const available = product.available !== false;
           return (
             <View
               key={product.id}
-              className="flex-row items-center gap-3 rounded-[20px] border border-border bg-card p-3"
+              className="gap-3 rounded-[20px] border border-border bg-card p-3"
             >
-              <ShopPhoto
-                photoKey={product.photoKey}
-                imageKey={product.imageKey}
-                imageUri={product.imageUrl}
-                label={product.name}
-                style={{ width: 70, height: 76, borderRadius: 13 }}
-              />
-              <ScrollPressable
-                accessibilityRole="button"
-                accessibilityLabel={`Edit ${product.name}, ${stock} in stock`}
-                onPress={() =>
-                  router.push({
-                    pathname: '/shop-workspace/product/[id]',
-                    params: { id: product.id },
-                  })
-                }
-                className="min-h-[76px] flex-1 flex-row items-center gap-2"
-              >
-                <View className="flex-1 gap-1.5">
-                  <Text className="text-[10px] text-muted-foreground">
-                    {product.category}
-                  </Text>
-                  <Text className="text-sm font-medium leading-5 text-foreground">
-                    {product.name}
-                  </Text>
-                  <Text className="text-xs text-muted-foreground">
-                    {formatMoney(product.price)}
-                  </Text>
-                  <ShopTag
-                    label={stock === 0 ? 'Out of stock' : `${stock} in stock`}
-                    tone={stock > 0 ? 'success' : 'warning'}
-                  />
-                </View>
-                <Icon
-                  name="chevron"
-                  size={16}
-                  color={palette['muted-foreground']}
+              <View className="flex-row items-center gap-3">
+                <ShopPhoto
+                  photoKey={product.photoKey}
+                  imageKey={product.imageKey}
+                  imageUri={product.imageUrl}
+                  label={product.name}
+                  style={{ width: 70, height: 76, borderRadius: 13 }}
                 />
-              </ScrollPressable>
+                <ScrollPressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Edit ${product.name}, ${available ? 'available' : 'unavailable'}, ${stock} in stock`}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/shop-workspace/product/[id]',
+                      params: { id: product.id },
+                    })
+                  }
+                  className="min-h-[76px] flex-1 flex-row items-center gap-2"
+                >
+                  <View className="flex-1 gap-1.5">
+                    <Text className="text-[10px] text-muted-foreground">
+                      {product.category}
+                    </Text>
+                    <Text className="text-sm font-medium leading-5 text-foreground">
+                      {product.name}
+                    </Text>
+                    <Text className="text-xs text-muted-foreground">
+                      {formatMoney(product.price)}
+                    </Text>
+                    <View className="flex-row flex-wrap gap-1.5">
+                      <ShopTag
+                        label={available ? 'Available' : 'Unavailable'}
+                        tone={available ? 'success' : 'neutral'}
+                      />
+                      <ShopTag
+                        label={stock === 0 ? 'Out of stock' : `${stock} in stock`}
+                        tone={stock > 0 ? 'neutral' : 'warning'}
+                      />
+                    </View>
+                  </View>
+                  <Icon
+                    name="chevron"
+                    size={16}
+                    color={palette['muted-foreground']}
+                  />
+                </ScrollPressable>
+              </View>
             </View>
           );
         })}
@@ -140,7 +160,7 @@ export default function ShopCatalogue() {
           <EmptyState
             icon="shop"
             title="No products found"
-            description="Try another search or switch the stock filter."
+            description="Try another search or filter, or add a new product."
           />
         )}
       </View>

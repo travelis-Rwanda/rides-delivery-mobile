@@ -57,6 +57,8 @@ function isWorkspace(value: unknown): value is ShopWorkspace {
         strings(product, ['id', 'name', 'description', 'category']) &&
         isCount(product.price) &&
         isCount(product.stock) &&
+        (product.available === undefined ||
+          typeof product.available === 'boolean') &&
         isOptionalPhotoKey(product.photoKey) &&
         (product.imageKey === undefined ||
           typeof product.imageKey === 'string') &&
