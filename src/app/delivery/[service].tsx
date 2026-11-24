@@ -120,6 +120,16 @@ export default function ServiceRoute() {
         </PageScroll>
       </Page>
     );
+  if (existing?.shopTracking?.length)
+    return (
+      <Redirect
+        href={{
+          pathname: '/shop-workspace/bookings/[id]',
+          params: { id: existing.id },
+        }}
+      />
+    );
+
   const selectedMerchantId = existing?.merchantId ?? merchantId;
   const merchant = getMerchant(selectedMerchantId, service.id);
   if (selectedMerchantId && !merchant)

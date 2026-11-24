@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { Text } from '../../components/ui/Text';
 
@@ -14,6 +14,7 @@ import {
 import { BrandMark } from '../../components/ui/Brand';
 import { useDelivery } from '../../features/delivery/DeliveryProvider';
 import { getService } from '../../features/delivery/services';
+import { shopTrackingStatus } from '../../features/delivery/shopTracking';
 import { usePalette } from '../../hooks/usePalette';
 import { PaymentSection } from '../../features/payments/components/PaymentSection';
 
@@ -21,9 +22,7 @@ export default function ConfirmedScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { requests, loading } = useDelivery();
   const palette = usePalette();
-  const request = requests.find(
-    (entry) => entry.id === id && entry.previewConfirmed,
-  );
+  const request = requests.find((entry) => entry.id === id);
   if (loading)
     return (
       <Page>
@@ -34,7 +33,13 @@ export default function ConfirmedScreen() {
         />
       </Page>
     );
-  if (!request)
+  if (request && shopTrackingStatus(request) === 'cancelled')
+    return (
+      <Redirect
+        href={{ pathname: '/shop-workspace/bookings/[id]', params: { id } }}
+      />
+    );
+  if (!request?.previewConfirmed)
     return (
       <Page>
         <Header title="Confirmation" />
@@ -101,13 +106,18 @@ export default function ConfirmedScreen() {
         {shopBooking ? (
           <>
             <Button
-              label="Back to shop"
-              onPress={() => router.dismissTo('/shop-workspace')}
+              label="Track booking"
+              onPress={() =>
+                router.push({
+                  pathname: '/shop-workspace/bookings/[id]',
+                  params: { id },
+                })
+              }
             />
             <Button
               secondary
-              label="View activity"
-              onPress={() => router.replace('/activity')}
+              label="Back to shop"
+              onPress={() => router.dismissTo('/shop-workspace')}
               icon={null}
             />
           </>

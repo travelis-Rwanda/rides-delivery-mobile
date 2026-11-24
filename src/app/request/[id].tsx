@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { Text } from '../../components/ui/Text';
@@ -10,7 +10,6 @@ import {
   EmptyState,
   Footer,
   Header,
-  Notice,
   Page,
   PageScroll,
   StepIndicator,
@@ -37,7 +36,7 @@ export default function ReviewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { requests, loading, save, loadError, reload } = useDelivery();
   const { negotiations, discard } = useNegotiation();
-  const { payments } = usePayments();  
+  const { payments } = usePayments();
   const palette = usePalette();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -84,6 +83,13 @@ export default function ReviewScreen() {
           </EmptyState>
         </PageScroll>
       </Page>
+    );
+
+  if (request.shopTracking?.length)
+    return (
+      <Redirect
+        href={{ pathname: '/shop-workspace/bookings/[id]', params: { id } }}
+      />
     );
 
   const service = getService(request.service)!;

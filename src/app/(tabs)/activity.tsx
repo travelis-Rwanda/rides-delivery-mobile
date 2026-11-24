@@ -13,6 +13,7 @@ import {
 } from '../../components/ui/primitives';
 import { useDelivery } from '../../features/delivery/DeliveryProvider';
 import { getService } from '../../features/delivery/services';
+import { BookingStatus } from '../../features/shop-workspace/bookingUI';
 import { usePalette } from '../../hooks/usePalette';
 
 export default function ActivityScreen() {
@@ -87,7 +88,9 @@ export default function ActivityScreen() {
                   accessibilityLabel={`View ${label} to ${request.destination}`}
                   onPress={() =>
                     router.push({
-                      pathname: '/request/[id]',
+                      pathname: request.shopTracking?.length
+                        ? '/shop-workspace/bookings/[id]'
+                        : '/request/[id]',
                       params: { id: request.id },
                     })
                   }
@@ -108,13 +111,17 @@ export default function ActivityScreen() {
                         )}
                       </Text>
                     </View>
-                    <View
-                      className={`rounded-full px-2.5 py-1 ${request.previewConfirmed ? 'bg-success-muted' : 'bg-muted'}`}
-                    >
-                      <Text className="text-[10px] font-medium text-foreground">
-                        {request.previewConfirmed ? 'PREVIEW READY' : 'DRAFT'}
-                      </Text>
-                    </View>
+                    {request.shopTracking?.length ? (
+                      <BookingStatus request={request} />
+                    ) : (
+                      <View
+                        className={`rounded-full px-2.5 py-1 ${request.previewConfirmed ? 'bg-success-muted' : 'bg-muted'}`}
+                      >
+                        <Text className="text-[10px] font-medium text-foreground">
+                          {request.previewConfirmed ? 'PREVIEW READY' : 'DRAFT'}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                   <View className="flex-row items-center gap-2">
                     <Icon

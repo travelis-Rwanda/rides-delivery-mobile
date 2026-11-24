@@ -1,5 +1,5 @@
 
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
@@ -78,6 +78,7 @@ export default function NegotiateScreen() {
     if (
       !id ||
       !request ||
+      request.shopTracking?.length ||
       key === undefined ||
       minimumAmount === undefined ||
       loading ||
@@ -145,6 +146,12 @@ export default function NegotiateScreen() {
           </EmptyState>
         </PageScroll>
       </Page>
+    );
+  if (request.shopTracking?.length)
+    return (
+      <Redirect
+        href={{ pathname: '/shop-workspace/bookings/[id]', params: { id } }}
+      />
     );
   if (!minimum)
     return (

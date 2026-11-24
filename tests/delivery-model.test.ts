@@ -11,6 +11,13 @@ import {
   type DeliveryRequest,
 } from '../src/features/delivery/model';
 import { getService } from '../src/features/delivery/services';
+import {
+  isPastShopBooking,
+  nextShopTrackingStep,
+  recordShopTracking,
+  shopTrackingStatus,
+  shopTrackingTimeline,
+} from '../src/features/delivery/shopTracking';
 
 function request(overrides: Partial<DeliveryRequest> = {}): DeliveryRequest {
   return {
@@ -113,6 +120,79 @@ test('shop bookings round-trip as parcel requests with an explicit role', () => 
     isDeliveryRequest(request({ service: 'shop', bookingSource: 'shop' })),
     false,
   );
+});
+
+test('confirmed shop bookings track delivery in order and retain timestamps', () => {
+  let booking = request({
+    bookingSource: 'shop',
+    parcelDirection: 'receive',
+    previewConfirmed: true,
+  });
+  assert.equal(shopTrackingStatus(booking), 'awaiting-pickup');
+  assert.throws(() => recordShopTracking(booking, 'delivered'));
+  for (const status of [
+    'on-the-way',
+    'in-transit',
+    'delivered',
+    'completed',
+  ] as const) {
+    assert.equal(isPastShopBooking(booking), false);
+    assert.equal(nextShopTrackingStep(booking)?.status, status);
+    booking = recordShopTracking(booking, status);
+    assert.equal(shopTrackingStatus(booking), status);
+    assert.ok(isDeliveryRequest(JSON.parse(JSON.stringify(booking))));
+    assert.throws(() => recordShopTracking(booking, status));
+    assert.throws(() => recordShopTracking(booking, 'cancelled'));
+  }
+  assert.equal(isPastShopBooking(booking), true);
+  assert.equal(nextShopTrackingStep(booking), undefined);
+  assert.ok(shopTrackingTimeline(booking).every((step) => step.reached));
+  assert.deepEqual(
+    shopTrackingTimeline(booking)
+      .slice(2)
+      .map(({ status, at }) => ({ status, at })),
+    booking.shopTracking,
+  );
+});
+
+test('cancelled shop bookings retain their details and previously reached steps', () => {
+  for (const confirmed of [false, true]) {
+    const booking = request({
+      bookingSource: 'shop',
+      parcelDirection: 'send',
+      previewConfirmed: confirmed,
+    });
+    const archived = recordShopTracking(booking, 'cancelled');
+    assert.ok(isDeliveryRequest(JSON.parse(JSON.stringify(archived))));
+    assert.equal(archived.description, booking.description);
+    assert.equal(isPastShopBooking(archived), true);
+    assert.equal(nextShopTrackingStep(archived), undefined);
+    assert.deepEqual(
+      shopTrackingTimeline(archived).map((step) => step.status),
+      confirmed
+        ? ['draft', 'awaiting-pickup', 'cancelled']
+        : ['draft', 'cancelled'],
+    );
+    assert.throws(() => recordShopTracking(archived, 'on-the-way'));
+  }
+});
+
+test('tracking cannot attach to personal requests or skip a step in storage', () => {
+  const personal = request({ previewConfirmed: true });
+  const booking = {
+    ...personal,
+    bookingSource: 'shop',
+    parcelDirection: 'receive',
+  };
+  const at = '2026-11-07T11:00:00.000Z';
+  assert.throws(() => recordShopTracking(personal, 'on-the-way'));
+  for (const invalid of [
+    { ...personal, shopTracking: [{ status: 'on-the-way', at }] },
+    { ...booking, shopTracking: [{ status: 'in-transit', at }] },
+    { ...booking, shopTracking: [{ status: 'on-the-way', at: null }] },
+  ]) {
+    assert.equal(isDeliveryRequest(invalid), false);
+  }
 });
 
 test('a saved road route requires two valid stops and survives a storage round trip', () => {
