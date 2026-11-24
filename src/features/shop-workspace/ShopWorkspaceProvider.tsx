@@ -13,6 +13,7 @@ import { isCoordinate } from '../maps/places';
 import { orderStatusLabels, type ShopWorkspace } from './model';
 import { validPhotoKey } from './photoAsset';
 import { makeSampleWorkspace } from './sample';
+import { isShopPost } from './posts';
 
 const storageKey = 'rides.shop-workspace.preview.v1';
 
@@ -48,6 +49,8 @@ function isWorkspace(value: unknown): value is ShopWorkspace {
     (value.application.pickupPoint === undefined ||
       isCoordinate(value.application.pickupPoint)) &&
     isOptionalPhotoKey(value.application.photoKey) &&
+    (value.posts === undefined ||
+      (Array.isArray(value.posts) && value.posts.every(isShopPost))) &&
     (value.application.submittedAt === undefined ||
       typeof value.application.submittedAt === 'string') &&
     Array.isArray(value.products) &&

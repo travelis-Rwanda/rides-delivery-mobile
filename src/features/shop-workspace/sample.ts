@@ -16,6 +16,7 @@ export function makeSampleWorkspace(): ShopWorkspace {
   }));
   return {
     products,
+    posts: [],
     application: { name: '', category: '', contact: '', pickupAddress: '' },
     orders: [
       {

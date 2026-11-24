@@ -1,4 +1,3 @@
-
 import '../../global.css';
 
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
@@ -15,6 +14,7 @@ import { DeliveryProvider } from '../features/delivery/DeliveryProvider';
 import { NegotiationProvider } from '../features/negotiation/NegotiationProvider';
 import { MerchantCartProvider } from '../features/merchants/MerchantCartProvider';
 import { PaymentProvider } from '../features/payments/PaymentProvider';
+import { ShopWorkspaceProvider } from '../features/shop-workspace/ShopWorkspaceProvider';
 import { usePalette } from '../hooks/usePalette';
 
 void SplashScreen.preventAutoHideAsync();
@@ -76,18 +76,22 @@ export default function RootLayout() {
         <DeliveryProvider>
           <NegotiationProvider>
             <PaymentProvider>
-            <MerchantCartProvider>
-              <StatusBar style="auto" />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  // Android's default fade can expose the window between screens.
-                  animation:
-                    Platform.OS === 'android' ? 'slide_from_right' : 'default',
-                  contentStyle: { backgroundColor: palette.background },
-                }}
-              />
-            </MerchantCartProvider>
+              <ShopWorkspaceProvider>
+                <MerchantCartProvider>
+                  <StatusBar style="auto" />
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      // Android's default fade can expose the window between screens.
+                      animation:
+                        Platform.OS === 'android'
+                          ? 'slide_from_right'
+                          : 'default',
+                      contentStyle: { backgroundColor: palette.background },
+                    }}
+                  />
+                </MerchantCartProvider>
+              </ShopWorkspaceProvider>
             </PaymentProvider>
           </NegotiationProvider>
         </DeliveryProvider>

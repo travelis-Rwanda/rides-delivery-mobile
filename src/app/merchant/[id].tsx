@@ -27,6 +27,10 @@ import { ScrollPressable } from '../../components/ui/ScrollInteraction';
 import { MapCanvas } from '../../features/maps/components/MapCanvas';
 import { pickupColor } from '../../features/maps/components/mapTypes';
 import { usePalette } from '../../hooks/usePalette';
+import { useShopWorkspace } from '../../features/shop-workspace/ShopWorkspaceProvider';
+import { ShopPostCard } from '../../features/shop-workspace/ShopPostCard';
+import { publishedShopPosts } from '../../features/shop-workspace/posts';
+import { sampleShop } from '../../features/shop-workspace/sample';
 
 export default function MerchantRoute() {
   const { id, request, edit } = useLocalSearchParams<{
@@ -73,6 +77,11 @@ function MerchantMenu({
 }) {
   const palette = usePalette();
   const { requests } = useDelivery();
+  const { workspace } = useShopWorkspace();
+  const posts =
+    merchant.id === sampleShop.id && workspace
+      ? publishedShopPosts(workspace)
+      : [];
   const existing = requests.find(
     (request) => request.id === requestId && request.merchantId === merchant.id,
   );
@@ -130,6 +139,26 @@ function MerchantMenu({
             {merchant.description}
           </Text>
         </View>
+        {posts.length > 0 && (
+          <View className="mb-5 gap-4">
+            <Text
+              accessibilityRole="header"
+              className="text-lg font-medium text-foreground"
+            >
+              Posts & offers
+            </Text>
+            {posts.map((post) => (
+              <ShopPostCard
+                key={post.id}
+                post={post}
+                product={workspace?.products.find(
+                  (product) => product.id === post.productId,
+                )}
+                shopName={workspace?.application.name || merchant.name}
+              />
+            ))}
+          </View>
+        )}
         <View className="mb-5 overflow-hidden rounded-[18px] border border-border bg-card">
           <ScrollPressable
             accessibilityRole="button"

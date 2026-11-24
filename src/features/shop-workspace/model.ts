@@ -1,4 +1,5 @@
 import type { Coordinate } from '../maps/places';
+import type { ShopPost } from './posts';
 
 export type ShopVariant = { id: string; name: string; stock: number };
 
@@ -58,6 +59,7 @@ export type ShopWorkspace = {
   products: ShopProduct[];
   orders: ShopOrder[];
   application: ShopApplication;
+  posts?: ShopPost[];
 };
 
 export const orderStatusLabels: Record<ShopOrderStatus, string> = {
@@ -84,6 +86,9 @@ export function deleteProduct(
   return {
     ...workspace,
     products: workspace.products.filter((product) => product.id !== productId),
+    posts: workspace.posts?.map((post) =>
+      post.productId === productId ? { ...post, status: 'draft' } : post,
+    ),
   };
 }
 
