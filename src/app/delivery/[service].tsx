@@ -56,6 +56,8 @@ import {
   vehicleLabels,
 } from '../../features/negotiation/selection';
 import { packagingFee } from '../../features/pricing/packaging';
+import { useShopWorkspace } from '../../features/shop-workspace/ShopWorkspaceProvider';
+import { shopTransportDefaults } from '../../features/shop-workspace/transport';
 
 export default function ServiceRoute() {
   const {
@@ -63,14 +65,17 @@ export default function ServiceRoute() {
     id,
     merchant: merchantId,
     direction,
+    source,
   } = useLocalSearchParams<{
     service: string;
     id?: string;
     merchant?: string;
     direction?: string;
+    source?: string;
   }>();
   const service = getService(serviceId);
   const { requests, loading } = useDelivery();
+  const { workspace, loading: shopLoading } = useShopWorkspace();
   if (!service)
     return (
       <Page>
@@ -115,6 +120,16 @@ export default function ServiceRoute() {
         </PageScroll>
       </Page>
     );
+  if (existing?.shopTracking?.length)
+    return (
+      <Redirect
+        href={{
+          pathname: '/shop-workspace/bookings/[id]',
+          params: { id: existing.id },
+        }}
+      />
+    );
+
   const selectedMerchantId = existing?.merchantId ?? merchantId;
   const merchant = getMerchant(selectedMerchantId, service.id);
   if (selectedMerchantId && !merchant)
@@ -154,13 +169,29 @@ export default function ServiceRoute() {
         ? 'receive'
         : 'send'
       : undefined;
+  const shopBooking =
+    existing?.bookingSource === 'shop' ||
+    (!existing && service.id === 'parcel' && source === 'shop');
+  if (shopBooking && !existing && shopLoading)
+    return (
+      <Page>
+        <Header title="Book transport" />
+        <ActivityIndicator accessibilityLabel="Loading shop details" />
+      </Page>
+    );
   return (
     <ServiceForm
-      key={`${service.id}-${merchant?.id ?? parcelDirection ?? 'standard'}-${existing?.id ?? 'new'}`}
+      key={`${service.id}-${merchant?.id ?? parcelDirection ?? 'standard'}-${existing?.id ?? (shopBooking ? 'shop' : 'new')}`}
       service={service}
       existing={existing}
       merchant={merchant}
       parcelDirection={parcelDirection}
+      shopBooking={shopBooking}
+      shopDefaults={
+        shopBooking && parcelDirection && !existing
+          ? shopTransportDefaults(parcelDirection, workspace?.application)
+          : undefined
+      }
     />
   );
 }
@@ -170,11 +201,15 @@ function ServiceForm({
   existing,
   merchant,
   parcelDirection,
+  shopBooking,
+  shopDefaults,
 }: {
   service: Service;
   existing?: DeliveryRequest;
   merchant?: Merchant;
   parcelDirection?: ParcelDirection;
+  shopBooking: boolean;
+  shopDefaults?: ReturnType<typeof shopTransportDefaults>;
 }) {
   const palette = usePalette();
   const { save, loading, loadError } = useDelivery();
@@ -200,6 +235,7 @@ function ServiceForm({
           service: service.id,
           ...(merchant ? { merchantId: merchant.id } : {}),
           ...(parcelDirection ? { parcelDirection } : {}),
+          ...(shopBooking ? { bookingSource: 'shop' } : {}),
           pickup: merchantOrder
             ? (merchant?.name ??
               (service.id === 'restaurant'
@@ -215,6 +251,7 @@ function ServiceForm({
           quantities: merchant ? { ...cart.quantities } : {},
           createdAt: new Date().toISOString(),
           previewConfirmed: false,
+          ...shopDefaults,
         },
   );
   const form = merchant
@@ -355,7 +392,7 @@ function ServiceForm({
         <View className="mb-6">
           <View className="flex-1">
             <Text className="mb-2 text-[10px] font-bold tracking-[1.5px] text-primary">
-              {service.eyebrow}
+              {shopBooking ? 'SHOP TRANSPORT' : service.eyebrow}
             </Text>
             <Text
               accessibilityRole="header"
@@ -370,11 +407,15 @@ function ServiceForm({
                   : 'Let’s plan your delivery.'}
             </Text>
             <Text className="mt-2 text-[12px] leading-5 text-muted-foreground">
-              {receiving
-                ? 'Tell us where to collect the parcel and where to bring it.'
-                : merchant
-                  ? `Your basket from ${merchant.name}.`
-                  : service.description}
+              {shopBooking
+                ? receiving
+                  ? 'Arrange delivery from the sender to your shop.'
+                  : 'Arrange delivery from your shop to the recipient.'
+                : receiving
+                  ? 'Tell us where to collect the parcel and where to bring it.'
+                  : merchant
+                    ? `Your basket from ${merchant.name}.`
+                    : service.description}
             </Text>
           </View>
         </View>
@@ -796,7 +837,9 @@ function ServiceForm({
                   ? 'Collection point'
                   : receiving
                     ? 'Sender’s pickup address'
-                    : 'Pickup address'
+                    : shopBooking
+                      ? 'Shop pickup address'
+                      : 'Pickup address'
               }
               placeholder={
                 form.method === 'collection'
@@ -811,11 +854,17 @@ function ServiceForm({
               maxLength={200}
               autoComplete="street-address"
               useDeviceLocation={!receiving && form.method === 'pickup'}
-              autoFill={!existing}
+              autoFill={!existing && !shopBooking}
             />
           )}
           <AddressField
-            label={receiving ? 'Your delivery address' : 'Delivery address'}
+            label={
+              receiving
+                ? shopBooking
+                  ? 'Shop delivery address'
+                  : 'Your delivery address'
+                : 'Delivery address'
+            }
             placeholder="Area, street, building or landmark"
             value={form.destination}
             point={form.destinationPoint}
@@ -825,7 +874,7 @@ function ServiceForm({
             maxLength={200}
             autoComplete="street-address"
             useDeviceLocation={receiving}
-            autoFill={!existing}
+            autoFill={!existing && !shopBooking}
           />
           {form.pickupPoint && form.destinationPoint ? (
             <RoadRouteCard
@@ -856,7 +905,9 @@ function ServiceForm({
                 hint={
                   receiving
                     ? 'The sender, who hands the item to the driver.'
-                    : 'Usually you, or whoever hands the item over.'
+                    : shopBooking
+                      ? 'The shop contact who will hand over the parcel.'
+                      : 'Usually you, or whoever hands the item over.'
                 }
                 contact={form.pickupContact}
                 nameError={errors.pickupContactName}
@@ -869,7 +920,9 @@ function ServiceForm({
                 title="Who will receive it?"
                 hint={
                   receiving
-                    ? 'Usually you.'
+                    ? shopBooking
+                      ? 'The shop contact who will receive the parcel.'
+                      : 'Usually you.'
                     : 'The person at the delivery address.'
                 }
                 contact={form.receiverContact}

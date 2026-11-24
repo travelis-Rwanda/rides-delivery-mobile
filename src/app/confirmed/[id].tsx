@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { Text } from '../../components/ui/Text';
 
@@ -14,6 +14,7 @@ import {
 import { BrandMark } from '../../components/ui/Brand';
 import { useDelivery } from '../../features/delivery/DeliveryProvider';
 import { getService } from '../../features/delivery/services';
+import { shopTrackingStatus } from '../../features/delivery/shopTracking';
 import { usePalette } from '../../hooks/usePalette';
 import { PaymentSection } from '../../features/payments/components/PaymentSection';
 
@@ -21,9 +22,7 @@ export default function ConfirmedScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { requests, loading } = useDelivery();
   const palette = usePalette();
-  const request = requests.find(
-    (entry) => entry.id === id && entry.previewConfirmed,
-  );
+  const request = requests.find((entry) => entry.id === id);
   if (loading)
     return (
       <Page>
@@ -34,7 +33,13 @@ export default function ConfirmedScreen() {
         />
       </Page>
     );
-  if (!request)
+  if (request && shopTrackingStatus(request) === 'cancelled')
+    return (
+      <Redirect
+        href={{ pathname: '/shop-workspace/bookings/[id]', params: { id } }}
+      />
+    );
+  if (!request?.previewConfirmed)
     return (
       <Page>
         <Header title="Confirmation" />
@@ -51,6 +56,7 @@ export default function ConfirmedScreen() {
         </PageScroll>
       </Page>
     );
+  const shopBooking = request.bookingSource === 'shop';
   return (
     <Page>
       <Header title="Confirmation" back={false} />
@@ -72,8 +78,9 @@ export default function ConfirmedScreen() {
             Your preview is ready.
           </Text>
           <Text className="mt-3 max-w-xs text-center text-[12px] leading-[21px] text-muted-foreground">
-            Your {getService(request.service)?.label.toLowerCase()} preview is
-            saved on this device.
+            {shopBooking
+              ? 'Your shop’s parcel booking preview is saved on this device.'
+              : `Your ${getService(request.service)?.label.toLowerCase()} preview is saved on this device.`}
           </Text>
         </View>
         <View className="mb-5 gap-4 rounded-[20px] bg-card p-5">
@@ -96,16 +103,38 @@ export default function ConfirmedScreen() {
         <PaymentSection request={request} />
       </PageScroll>
       <Footer>
-        <Button
-          label="View activity"
-          onPress={() => router.replace('/activity')}
-        />
-        <Button
-          secondary
-          label="Back to services"
-          onPress={() => router.replace('/')}
-          icon={null}
-        />
+        {shopBooking ? (
+          <>
+            <Button
+              label="Track booking"
+              onPress={() =>
+                router.push({
+                  pathname: '/shop-workspace/bookings/[id]',
+                  params: { id },
+                })
+              }
+            />
+            <Button
+              secondary
+              label="Back to shop"
+              onPress={() => router.dismissTo('/shop-workspace')}
+              icon={null}
+            />
+          </>
+        ) : (
+          <>
+            <Button
+              label="View activity"
+              onPress={() => router.replace('/activity')}
+            />
+            <Button
+              secondary
+              label="Back to services"
+              onPress={() => router.replace('/')}
+              icon={null}
+            />
+          </>
+        )}
       </Footer>
     </Page>
   );

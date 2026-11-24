@@ -14,6 +14,7 @@ import {
   PageScroll,
 } from '../../../components/ui/primitives';
 import { useDelivery } from '../../../features/delivery/DeliveryProvider';
+import { shopTrackingStatus } from '../../../features/delivery/shopTracking';
 import { formatMoney } from '../../../features/delivery/services';
 import { useDriverSession } from '../../../features/driver-workspace/DriverSessionProvider';
 import {
@@ -94,7 +95,13 @@ export default function DriverJobScreen() {
   const driver = getMockDriver(driverId);
   const status = negotiation ? jobStatus(negotiation, driverId) : undefined;
 
-  if (!request || !negotiation || !driver || !status)
+  if (
+    !request ||
+    shopTrackingStatus(request) === 'cancelled' ||
+    !negotiation ||
+    !driver ||
+    !status
+  )
     return (
       <Page>
         <Header title="Delivery job" />

@@ -21,10 +21,12 @@ export type IconName =
   | 'close'
   | 'image'
   | 'edit'
+  | 'promotion'
   | 'search';
 // The existing outline icon system is shared by browsing and delivery screens.
 
 const paths: Record<IconName, string> = {
+  promotion: 'M3 10v4h4l10 5V5L7 10Zm4 4 2 6h3l-2-5M21 9v6',
   search: 'M21 21l-5-5M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z',
   arrow: 'M5 12h14m-5-5 5 5-5 5',
   back: 'M19 12H5m5-5-5 5 5 5',

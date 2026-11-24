@@ -13,6 +13,7 @@ import {
   PageScroll,
 } from '../../components/ui/primitives';
 import { useDelivery } from '../../features/delivery/DeliveryProvider';
+import { shopTrackingStatus } from '../../features/delivery/shopTracking';
 import { formatMoney } from '../../features/delivery/services';
 import { useDriverSession } from '../../features/driver-workspace/DriverSessionProvider';
 import { jobsForDriver } from '../../features/driver-workspace/jobs';
@@ -40,7 +41,10 @@ export default function DriverWorkspaceHome() {
   const loading = sessionLoading || requestsLoading || negotiationsLoading;
   // A job whose request was cancelled has nothing left to show.
   const jobs = jobsForDriver(negotiations, driverId).filter((job) =>
-    requests.some((request) => request.id === job.requestId),
+    requests.some(
+      (request) =>
+        request.id === job.requestId && shopTrackingStatus(request) !== 'cancelled',
+    ),
   );
   const needsYou = jobs.filter((job) => job.status === 'your-turn').length;
 

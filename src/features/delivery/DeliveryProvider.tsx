@@ -1,4 +1,3 @@
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   createContext,
@@ -21,6 +20,10 @@ type DeliveryContextValue = {
   loadError: boolean;
   reload: () => Promise<void>;
   save: (request: DeliveryRequest) => Promise<void>;
+  update: (
+    requestId: string,
+    change: (request: DeliveryRequest) => DeliveryRequest,
+  ) => Promise<void>;
   remove: (requestId: string) => Promise<void>;
 };
 
@@ -64,27 +67,17 @@ export function DeliveryProvider({ children }: PropsWithChildren) {
     return readArchive();
   }, [readArchive]);
 
-  const save = useCallback(
-    async (request: DeliveryRequest) => {
+  const writeRequests = useCallback(
+    async (change: (requests: DeliveryRequest[]) => DeliveryRequest[]) => {
       // Do not overwrite an unreadable archive with a new, incomplete list.
       if (loadError || loading)
         throw new Error(
           'Saved requests are unavailable. Try loading them again from Activity.',
         );
 
-      if (!isDeliveryRequest(request))
-        throw new Error('Please check your request details.');
-
       const write = writes.current.then(async () => {
-        const next = [
-          request,
-          ...current.current.filter((entry) => entry.id !== request.id),
-        ];
-
-        await AsyncStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify(toArchive(next)),
-        );
+        const next = change(current.current);
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toArchive(next)));
 
         current.current = next;
         setRequests(next);
@@ -96,36 +89,43 @@ export function DeliveryProvider({ children }: PropsWithChildren) {
     [loadError, loading],
   );
 
+  const save = useCallback(
+    (request: DeliveryRequest) =>
+      writeRequests((entries) => {
+        if (!isDeliveryRequest(request))
+          throw new Error('Please check your request details.');
+        const existing = entries.find((entry) => entry.id === request.id);
+        if (existing?.shopTracking?.length)
+          throw new Error('This booking has already moved to another stage.');
+        return [request, ...entries.filter((entry) => entry.id !== request.id)];
+      }),
+    [writeRequests],
+  );
+
+  const update = useCallback(
+    (requestId: string, change: (request: DeliveryRequest) => DeliveryRequest) =>
+      writeRequests((entries) => {
+        const existing = entries.find((entry) => entry.id === requestId);
+        if (!existing) throw new Error('This booking could not be found.');
+        const next = change(existing);
+        if (next.id !== requestId || !isDeliveryRequest(next))
+          throw new Error('Please check your booking details.');
+        return entries.map((entry) => (entry.id === requestId ? next : entry));
+      }),
+    [writeRequests],
+  );
+
   const remove = useCallback(
-    async (requestId: string) => {
-      if (loadError || loading)
-        throw new Error(
-          'Saved requests are unavailable. Try loading them again from Activity.',
-        );
-
-      const write = writes.current.then(async () => {
-        const next = current.current.filter(
-          (entry) => entry.id !== requestId,
-        );
-
-        await AsyncStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify(toArchive(next)),
-        );
-
-        current.current = next;
-        setRequests(next);
-      });
-
-      writes.current = write.catch(() => {});
-      await write;
-    },
-    [loadError, loading],
+    (requestId: string) =>
+      writeRequests((entries) =>
+        entries.filter((entry) => entry.id !== requestId),
+      ),
+    [writeRequests],
   );
 
   return (
     <DeliveryContext.Provider
-      value={{ requests, loading, loadError, reload, save, remove }}
+      value={{ requests, loading, loadError, reload, save, update, remove }}
     >
       {children}
     </DeliveryContext.Provider>

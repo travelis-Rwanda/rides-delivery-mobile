@@ -10,11 +10,13 @@ export function makeSampleWorkspace(): ShopWorkspace {
     category: item.id === 'daily-bread' ? 'Bakery' : 'Groceries',
     price: item.price,
     stock: item.stockQuantity ?? 0,
+    available: true,
     imageKey: item.imageKey,
     variants: [],
   }));
   return {
     products,
+    posts: [],
     application: { name: '', category: '', contact: '', pickupAddress: '' },
     orders: [
       {

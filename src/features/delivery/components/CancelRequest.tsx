@@ -8,14 +8,21 @@ import { useNegotiation } from '../../negotiation/NegotiationProvider';
 import { isPaid, openAttempt } from '../../payments/payment';
 import { usePayments } from '../../payments/PaymentProvider';
 import { useDelivery } from '../DeliveryProvider';
+import { recordShopTracking } from '../shopTracking';
 
-// Cancel a request at any point before it is confirmed. Two taps, so it
-// cannot happen by accident, and it works on web where Alert.alert does not.
-export function CancelRequest({ requestId }: { requestId: string }) {
-  const { remove } = useDelivery();
+export function CancelRequest({
+  requestId,
+  disabled = false,
+}: {
+  requestId: string;
+  disabled?: boolean;
+}) {
+  const { remove, requests, update } = useDelivery();
   const { discard } = useNegotiation();
   const { payments, discard: discardPayment } = usePayments();
   const payment = payments[requestId];
+  const shopBooking =
+    requests.find((request) => request.id === requestId)?.bookingSource === 'shop';
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -24,10 +31,16 @@ export function CancelRequest({ requestId }: { requestId: string }) {
     setBusy(true);
     setError('');
     try {
-      await discard(requestId); // offers and any agreed fare
-      await discardPayment(requestId); // an unpaid payment attempt, if any
-      await remove(requestId); // the request itself
-      router.replace('/');
+      if (shopBooking) {
+        await update(requestId, (request) =>
+          recordShopTracking(request, 'cancelled'),
+        );
+      } else {
+        await discard(requestId);
+        await discardPayment(requestId);
+        await remove(requestId);
+        router.replace('/');
+      }
     } catch {
       setError('Could not cancel this request. Please try again.');
       setBusy(false);
@@ -49,13 +62,14 @@ export function CancelRequest({ requestId }: { requestId: string }) {
         is answered or expires.
       </Notice>
     );
-  
+
   if (!confirming)
     return (
       <Button
         label="Cancel request"
         icon="close"
         secondary
+        disabled={disabled}
         onPress={() => setConfirming(true)}
       />
     );
@@ -66,13 +80,15 @@ export function CancelRequest({ requestId }: { requestId: string }) {
         Cancel this request?
       </Text>
       <Text className="text-sm leading-6 text-muted-foreground">
-        Your request and any driver offers will be deleted. This can’t be
-        undone.
+        {shopBooking
+          ? 'You’ll still be able to view this cancelled booking in your shop’s history.'
+          : 'Your request and any driver offers will be deleted. This can’t be undone.'}
       </Text>
       <Button
         label="Yes, cancel request"
         icon="close"
         loading={busy}
+        disabled={disabled}
         onPress={() => void cancel()}
       />
       <Button

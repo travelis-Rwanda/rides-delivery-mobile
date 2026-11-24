@@ -1,4 +1,5 @@
 import { contactErrors, isContact, type Contact } from './contact';
+import { isShopTracking, type ShopTrackingEvent } from './shopTracking';
 import {
   getService,
   previewCatalog,
@@ -21,6 +22,8 @@ export type DeliveryRequest = {
   service: ServiceId;
   merchantId?: string;
   parcelDirection?: ParcelDirection;
+  bookingSource?: 'shop';
+  shopTracking?: ShopTrackingEvent[];
   pickup: string;
   pickupPoint?: Coordinate;
   destination: string;
@@ -143,6 +146,14 @@ export function isDeliveryRequest(value: unknown): value is DeliveryRequest {
     (r.parcelDirection === undefined ||
       (r.service === 'parcel' &&
         (r.parcelDirection === 'send' || r.parcelDirection === 'receive'))) &&
+    (r.bookingSource === undefined ||
+      (r.bookingSource === 'shop' &&
+        r.service === 'parcel' &&
+        !r.merchantId &&
+        (r.parcelDirection === 'send' || r.parcelDirection === 'receive'))) &&
+    (r.shopTracking === undefined ||
+      (r.bookingSource === 'shop' &&
+        isShopTracking(r.shopTracking, r.previewConfirmed))) &&
     (r.merchantId === undefined ||
       (typeof r.merchantId === 'string' &&
         !!getMerchant(r.merchantId, r.service))) &&
