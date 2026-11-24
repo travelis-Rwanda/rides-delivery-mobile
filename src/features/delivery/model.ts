@@ -21,6 +21,7 @@ export type DeliveryRequest = {
   service: ServiceId;
   merchantId?: string;
   parcelDirection?: ParcelDirection;
+  bookingSource?: 'shop';
   pickup: string;
   pickupPoint?: Coordinate;
   destination: string;
@@ -142,6 +143,11 @@ export function isDeliveryRequest(value: unknown): value is DeliveryRequest {
     !!getService(r.service) &&
     (r.parcelDirection === undefined ||
       (r.service === 'parcel' &&
+        (r.parcelDirection === 'send' || r.parcelDirection === 'receive'))) &&
+    (r.bookingSource === undefined ||
+      (r.bookingSource === 'shop' &&
+        r.service === 'parcel' &&
+        !r.merchantId &&
         (r.parcelDirection === 'send' || r.parcelDirection === 'receive'))) &&
     (r.merchantId === undefined ||
       (typeof r.merchantId === 'string' &&

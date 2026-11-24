@@ -96,6 +96,25 @@ test('saved parcel requests support receiving and older requests without a direc
   assert.equal(isDeliveryRequest({ ...received, service: 'cargo' }), false);
 });
 
+test('shop bookings round-trip as parcel requests with an explicit role', () => {
+  for (const direction of ['send', 'receive'] as const) {
+    const booking = request({
+      bookingSource: 'shop',
+      parcelDirection: direction,
+    });
+    assert.ok(isDeliveryRequest(JSON.parse(JSON.stringify(booking))));
+    assert.equal(
+      isDeliveryRequest({ ...booking, parcelDirection: undefined }),
+      false,
+    );
+    assert.equal(isDeliveryRequest({ ...booking, bookingSource: 'other' }), false);
+  }
+  assert.equal(
+    isDeliveryRequest(request({ service: 'shop', bookingSource: 'shop' })),
+    false,
+  );
+});
+
 test('a saved road route requires two valid stops and survives a storage round trip', () => {
   const pickupPoint = { latitude: -1.9547, longitude: 30.0947 };
   const destinationPoint = { latitude: -1.9358, longitude: 30.0846 };

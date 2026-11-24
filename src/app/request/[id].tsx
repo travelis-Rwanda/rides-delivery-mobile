@@ -211,6 +211,13 @@ export default function ReviewScreen() {
                     ? `${request.size} · Driver pickup`
                     : `${items.reduce((sum, item) => sum + item.quantity, 0)} items · Door delivery`}
               </Text>
+              {request.bookingSource === 'shop' && (
+                <Text className="mt-1 text-xs font-medium text-primary">
+                  {request.parcelDirection === 'receive'
+                    ? 'Shop booking · Receiver'
+                    : 'Shop booking · Sender'}
+                </Text>
+              )}
             </View>
 
             {!paid && (

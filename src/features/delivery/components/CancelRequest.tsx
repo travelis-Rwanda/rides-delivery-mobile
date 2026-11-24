@@ -12,7 +12,7 @@ import { useDelivery } from '../DeliveryProvider';
 // Cancel a request at any point before it is confirmed. Two taps, so it
 // cannot happen by accident, and it works on web where Alert.alert does not.
 export function CancelRequest({ requestId }: { requestId: string }) {
-  const { remove } = useDelivery();
+  const { remove, requests } = useDelivery();
   const { discard } = useNegotiation();
   const { payments, discard: discardPayment } = usePayments();
   const payment = payments[requestId];
@@ -27,7 +27,12 @@ export function CancelRequest({ requestId }: { requestId: string }) {
       await discard(requestId); // offers and any agreed fare
       await discardPayment(requestId); // an unpaid payment attempt, if any
       await remove(requestId); // the request itself
-      router.replace('/');
+      if (
+        requests.find((request) => request.id === requestId)?.bookingSource ===
+        'shop'
+      )
+        router.dismissTo('/shop-workspace/transport');
+      else router.replace('/');
     } catch {
       setError('Could not cancel this request. Please try again.');
       setBusy(false);

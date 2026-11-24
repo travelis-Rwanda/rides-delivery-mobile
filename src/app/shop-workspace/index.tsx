@@ -185,6 +185,15 @@ export default function ShopWorkspaceHome() {
         <View className="border-t border-border">
           <ShopRow
             grouped
+            title="Book transport"
+            description="Send or receive a parcel from your shop account."
+            icon="cargo"
+            onPress={() => router.push('/shop-workspace/transport')}
+          />
+        </View>
+        <View className="border-t border-border">
+          <ShopRow
+            grouped
             title="Settlements"
             description="Track earnings and payouts."
             icon="clock"

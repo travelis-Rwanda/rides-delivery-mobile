@@ -8,6 +8,34 @@ import {
   unavailableOrderLines,
 } from '../src/features/shop-workspace/model';
 import { makeSampleWorkspace } from '../src/features/shop-workspace/sample';
+import { shopTransportDefaults } from '../src/features/shop-workspace/transport';
+
+test('shop transport prefills only the shop side and skips non-mobile contacts', () => {
+  const application = {
+    name: 'Daily Market',
+    category: 'Groceries',
+    contact: '0788 123 456',
+    pickupAddress: 'KG 10 Ave',
+    pickupPoint: { latitude: -1.95, longitude: 30.08 },
+  };
+  assert.deepEqual(shopTransportDefaults('send', application), {
+    pickup: application.pickupAddress,
+    pickupPoint: application.pickupPoint,
+    pickupContact: { name: application.name, phone: '+250788123456' },
+  });
+  assert.deepEqual(
+    shopTransportDefaults('receive', {
+      ...application,
+      contact: 'shop@example.com',
+    }),
+    {
+      destination: application.pickupAddress,
+      destinationPoint: application.pickupPoint,
+      receiverContact: { name: application.name, phone: '' },
+    },
+  );
+  assert.equal(shopTransportDefaults('send').pickupContact, undefined);
+});
 
 test('shop confirmation reserves stock once and only the merchant stages can advance', () => {
   const initial = makeSampleWorkspace();
