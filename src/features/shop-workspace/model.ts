@@ -60,7 +60,12 @@ export type ShopWorkspace = {
   orders: ShopOrder[];
   application: ShopApplication;
   posts?: ShopPost[];
+  momoMerchantCode?: string;
 };
+
+export function isMomoMerchantCode(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0 && !/[^0-9]/.test(value);
+}
 
 export const orderStatusLabels: Record<ShopOrderStatus, string> = {
   pending: 'Awaiting confirmation',

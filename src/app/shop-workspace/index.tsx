@@ -191,6 +191,19 @@ export default function ShopWorkspaceHome() {
             onPress={() => router.push('/shop-workspace/settlements')}
           />
         </View>
+        <View className="border-t border-border">
+          <ShopRow
+            grouped
+            title="MoMo merchant code"
+            description="Manage your shop’s MTN MoMo Pay code."
+            icon="shield"
+            onPress={() => router.push('/shop-workspace/momo')}
+          >
+            {workspace?.momoMerchantCode && (
+              <ShopTag label="Code saved" tone="success" />
+            )}
+          </ShopRow>
+        </View>
       </View>
 
       <Text className="mt-4 text-xs leading-5 text-muted-foreground">

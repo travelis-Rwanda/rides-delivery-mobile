@@ -10,7 +10,11 @@ import {
 } from 'react';
 
 import { isCoordinate } from '../maps/places';
-import { orderStatusLabels, type ShopWorkspace } from './model';
+import {
+  isMomoMerchantCode,
+  orderStatusLabels,
+  type ShopWorkspace,
+} from './model';
 import { validPhotoKey } from './photoAsset';
 import { makeSampleWorkspace } from './sample';
 import { isShopPost } from './posts';
@@ -49,6 +53,8 @@ function isWorkspace(value: unknown): value is ShopWorkspace {
     (value.application.pickupPoint === undefined ||
       isCoordinate(value.application.pickupPoint)) &&
     isOptionalPhotoKey(value.application.photoKey) &&
+    (value.momoMerchantCode === undefined ||
+      isMomoMerchantCode(value.momoMerchantCode)) &&
     (value.posts === undefined ||
       (Array.isArray(value.posts) && value.posts.every(isShopPost))) &&
     (value.application.submittedAt === undefined ||
